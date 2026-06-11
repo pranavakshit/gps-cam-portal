@@ -2,8 +2,9 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies and OpenSSL for Prisma
 COPY package*.json ./
+RUN apk add --no-cache openssl
 RUN npm install
 
 # We don't copy the source code here because we will map it as a volume in docker-compose.yml
