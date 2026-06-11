@@ -4,6 +4,13 @@ Write-Host "Starting GPS Cam Portal Environment..." -ForegroundColor Green
 docker compose up -d
 
 Write-Host "Environment is starting up in the background." -ForegroundColor Cyan
+Write-Host ""
+Write-Host "==========================================" -ForegroundColor Magenta
+Write-Host "  Web Portal : http://localhost:5173" -ForegroundColor Green
+Write-Host "  Backend API: http://localhost:5000" -ForegroundColor Green
+Write-Host "  Database   : localhost:3307 (MySQL)" -ForegroundColor Green
+Write-Host "==========================================" -ForegroundColor Magenta
+Write-Host ""
 Write-Host "Tailing logs... (Press 'q' at any time to gracefully stop)" -ForegroundColor Yellow
 
 $logJob = Start-Job {

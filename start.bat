@@ -5,6 +5,13 @@ echo Starting GPS Cam Portal Environment...
 docker compose up -d
 
 echo Environment is starting up in the background.
+echo.
+echo ==========================================
+echo   Web Portal : http://localhost:5173
+echo   Backend API: http://localhost:5000
+echo   Database   : localhost:3307 (MySQL)
+echo ==========================================
+echo.
 echo Tailing logs... (Press 'q' at any time to gracefully stop)
 
 :: Run logs in background. It will automatically terminate when containers stop.

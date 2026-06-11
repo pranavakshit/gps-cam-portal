@@ -4,6 +4,13 @@ echo -e "\033[1;32mStarting GPS Cam Portal Environment...\033[0m"
 docker compose up -d
 
 echo -e "\033[1;36mEnvironment is starting up in the background.\033[0m"
+echo -e ""
+echo -e "\033[1;35m==========================================\033[0m"
+echo -e "\033[1;32m  Web Portal : http://localhost:5173\033[0m"
+echo -e "\033[1;32m  Backend API: http://localhost:5000\033[0m"
+echo -e "\033[1;32m  Database   : localhost:3307 (MySQL)\033[0m"
+echo -e "\033[1;35m==========================================\033[0m"
+echo -e ""
 echo -e "\033[1;33mTailing logs... (Press 'q' at any time to gracefully stop)\033[0m"
 
 # Tail logs in the background
