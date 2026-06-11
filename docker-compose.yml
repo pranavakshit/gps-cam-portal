@@ -22,7 +22,7 @@ services:
       - DATABASE_URL=mysql://root:password@database:3306/gps_cam_portal
       - JWT_SECRET=your-secret-key-here
     ports:
-      - "5001:5001"
+      - "5001"
     depends_on:
       - database
 
@@ -32,7 +32,7 @@ services:
       dockerfile: Dockerfile
     container_name: gps_cam_web
     ports:
-      - "5173:80"
+      - "80"
     depends_on:
       - backend
 

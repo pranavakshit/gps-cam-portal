@@ -8,11 +8,18 @@ docker compose up --build -d
 
 Start-Sleep -Seconds 3
 
+# Fetch the dynamically assigned host ports
+$WebPortMapping = docker compose port web-portal 80
+$ApiPortMapping = docker compose port backend 5001
+
+$WebUrl = "http://" + ($WebPortMapping -replace '0.0.0.0', 'localhost')
+$ApiUrl = "http://" + ($ApiPortMapping -replace '0.0.0.0', 'localhost')
+
 Write-Host ""
 Write-Host "Docker containers are starting up! You can access them at:" -ForegroundColor Green
 Write-Host "-------------------------------------------------------"
-Write-Host "🌐 Web Admin Portal : http://localhost:5173" -ForegroundColor Cyan
-Write-Host "⚙️  Backend API      : http://localhost:5001" -ForegroundColor Cyan
+Write-Host "🌐 Web Admin Portal : $WebUrl" -ForegroundColor Cyan
+Write-Host "⚙️  Backend API      : $ApiUrl" -ForegroundColor Cyan
 Write-Host "🗄️  MySQL Database   : localhost:3306" -ForegroundColor Cyan
 Write-Host "-------------------------------------------------------"
 Write-Host ""
