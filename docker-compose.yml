@@ -18,11 +18,11 @@ services:
       dockerfile: Dockerfile
     container_name: gps_cam_backend
     environment:
-      - PORT=5000
+      - PORT=5001
       - DATABASE_URL=mysql://root:password@database:3306/gps_cam_portal
       - JWT_SECRET=your-secret-key-here
     ports:
-      - "5000:5000"
+      - "5001:5001"
     depends_on:
       - database
 
@@ -32,7 +32,7 @@ services:
       dockerfile: Dockerfile
     container_name: gps_cam_web
     ports:
-      - "8080:80"
+      - "5173:80"
     depends_on:
       - backend
 

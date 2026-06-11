@@ -11,8 +11,8 @@ Start-Sleep -Seconds 3
 Write-Host ""
 Write-Host "Docker containers are starting up! You can access them at:" -ForegroundColor Green
 Write-Host "-------------------------------------------------------"
-Write-Host "🌐 Web Admin Portal : http://localhost:8080" -ForegroundColor Cyan
-Write-Host "⚙️  Backend API      : http://localhost:5000" -ForegroundColor Cyan
+Write-Host "🌐 Web Admin Portal : http://localhost:5173" -ForegroundColor Cyan
+Write-Host "⚙️  Backend API      : http://localhost:5001" -ForegroundColor Cyan
 Write-Host "🗄️  MySQL Database   : localhost:3306" -ForegroundColor Cyan
 Write-Host "-------------------------------------------------------"
 Write-Host ""

@@ -12,8 +12,8 @@ timeout /t 3 /nobreak > nul
 echo.
 echo Docker containers are starting up! You can access them at:
 echo -------------------------------------------------------
-echo 🌐 Web Admin Portal : http://localhost:8080
-echo ⚙️  Backend API      : http://localhost:5000
+echo 🌐 Web Admin Portal : http://localhost:5173
+echo ⚙️  Backend API      : http://localhost:5001
 echo 🗄️  MySQL Database   : localhost:3306
 echo -------------------------------------------------------
 echo.
