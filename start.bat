@@ -1,22 +1,23 @@
 @echo off
 echo =======================================================
-echo       Starting GPS Cam Portal Development Servers      
+echo    Starting GPS Cam Portal via Docker Containers   
 echo =======================================================
 echo.
 
-echo [1/2] Starting Backend Server...
-start "GPS Cam Backend" cmd /c "cd backend && npm run dev"
-
-echo [2/2] Starting Web Portal...
-start "GPS Cam Web Portal" cmd /c "cd web-portal && npm run dev"
+echo Building and starting containers in the background...
+docker compose up --build -d
 
 timeout /t 3 /nobreak > nul
 
 echo.
-echo Servers are starting up! You can access them at:
+echo Docker containers are starting up! You can access them at:
 echo -------------------------------------------------------
-echo 🌐 Web Admin Portal : http://localhost:5173
+echo 🌐 Web Admin Portal : http://localhost:8080
 echo ⚙️  Backend API      : http://localhost:5000
+echo 🗄️  MySQL Database   : localhost:3306
 echo -------------------------------------------------------
+echo.
+echo To view logs, run: docker compose logs -f
+echo To stop servers, run: docker compose down
 echo.
 pause
