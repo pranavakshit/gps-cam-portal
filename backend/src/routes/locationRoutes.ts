@@ -1,15 +1,41 @@
 import { Router } from 'express';
-import { getLocations, createLocation } from '../controllers/locationController';
+import multer from 'multer';
+import { 
+  getStates,
+  getDistricts,
+  getSubDistricts,
+  getVillages,
+  getUlbs,
+  getWards,
+  importLgdData,
+  searchLocations,
+  getOfflineBundle,
+  createLocation,
+  updateLocation,
+  deleteLocation
+} from '../controllers/locationController';
 import { authenticateJWT } from '../middleware/authMiddleware';
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
-// GET /api/locations
-// Open endpoint for the Android app to fetch available locations
-router.get('/', getLocations);
+// Public endpoints for Android App
+router.get('/states', getStates);
+router.get('/states/:id/districts', getDistricts);
+router.get('/districts/:id/subdistricts', getSubDistricts);
+router.get('/subdistricts/:id/villages', getVillages);
+router.get('/districts/:id/ulbs', getUlbs);
+router.get('/ulbs/:id/wards', getWards);
+router.get('/search', searchLocations);
+router.get('/states/:id/offline-bundle', getOfflineBundle);
 
-// POST /api/locations
-// Protected endpoint for admin to add new locations
+// Protected Admin Endpoints
+router.post('/import', authenticateJWT, upload.single('zipfile'), importLgdData);
+
+// CRUD Endpoints for Drill-Down Editor
+router.get('/search', authenticateJWT, searchLocations);
 router.post('/', authenticateJWT, createLocation);
+router.put('/:id', authenticateJWT, updateLocation);
+router.delete('/:id', authenticateJWT, deleteLocation);
 
 export default router;
