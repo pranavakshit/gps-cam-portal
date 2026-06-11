@@ -72,7 +72,7 @@ fun GalleryScreen(
                                     if (!file.exists()) continue
                                     
                                     val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
-                                    val body = MultipartBody.Part.createFormData("photo", file.name, requestFile)
+                                    val body = MultipartBody.Part.createFormData("photos", file.name, requestFile)
 
                                     val uploaderBody = photo.uploader.toRequestBody("text/plain".toMediaTypeOrNull())
                                     val locNameBody = photo.locationName.toRequestBody("text/plain".toMediaTypeOrNull())

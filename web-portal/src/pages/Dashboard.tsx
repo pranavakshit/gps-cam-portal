@@ -49,11 +49,38 @@ const Dashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    // Simulate API fetch
-    setTimeout(() => {
-      setPhotos(MOCK_PHOTOS);
-    }, 500);
-  }, []);
+    const fetchPhotos = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/');
+          return;
+        }
+
+        const response = await fetch('http://localhost:5000/api/photos', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const formattedData = data.map((photo: any) => ({
+            ...photo,
+            imageUrl: `http://localhost:5000${photo.imageUrl}`
+          }));
+          setPhotos(formattedData);
+        } else if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('token');
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('Error fetching photos:', error);
+      }
+    };
+
+    fetchPhotos();
+  }, [navigate]);
 
   const handleLogout = () => {
     navigate('/');

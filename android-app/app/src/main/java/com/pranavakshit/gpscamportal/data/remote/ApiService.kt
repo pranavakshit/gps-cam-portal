@@ -15,7 +15,7 @@ interface ApiService {
     @POST("/api/photos/upload")
     suspend fun uploadPhoto(
         @Part("uploader") uploader: RequestBody,
-        @Part("location_name") locationName: RequestBody,
+        @Part("locationName") locationName: RequestBody,
         @Part("latitude") latitude: RequestBody,
         @Part("longitude") longitude: RequestBody,
         @Part("timestamp") timestamp: RequestBody,
