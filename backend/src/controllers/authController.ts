@@ -5,11 +5,11 @@ import prisma from '../db/prisma';
 
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET: string = process.env.JWT_SECRET || 'fallback-secret-for-dev';
-
 export const login = async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
+
+    const JWT_SECRET: string = process.env.JWT_SECRET || 'fallback-secret-for-dev';
 
     // TODO: Hash password check when user creation is added
     // For MVP, we might seed a dummy user or just accept anything for now if not set

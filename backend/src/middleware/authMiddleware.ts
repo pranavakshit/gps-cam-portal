@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET: string = process.env.JWT_SECRET || 'fallback-secret-for-dev';
-
 export interface AuthRequest extends Request {
   user?: {
     id: number;
@@ -22,9 +20,12 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
       return;
     }
 
+    const JWT_SECRET: string = process.env.JWT_SECRET || 'fallback-secret-for-dev';
+
     jwt.verify(token, JWT_SECRET, (err: jwt.VerifyErrors | null, user: any) => {
       if (err) {
-        res.status(403).json({ error: 'Forbidden or Token Expired' });
+        console.error("JWT Verify Error:", err);
+        res.status(403).json({ error: 'Forbidden or Token Expired', details: err.message });
         return;
       }
       req.user = user as any;
