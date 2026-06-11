@@ -67,6 +67,8 @@ const Dashboard: React.FC = () => {
           const data = await response.json();
           const formattedData = data.map((photo: any) => ({
             ...photo,
+            latitude: Number(photo.latitude),
+            longitude: Number(photo.longitude),
             imageUrl: `http://localhost:5000${photo.imageUrl}`
           }));
           setPhotos(formattedData);
