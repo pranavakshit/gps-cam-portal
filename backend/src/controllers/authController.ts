@@ -3,6 +3,10 @@ import { PrismaClient } from '@prisma/client';
 // import bcrypt from 'bcrypt';
 import prisma from '../db/prisma';
 
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET: string = process.env.JWT_SECRET || 'fallback-secret-for-dev';
+
 export const login = async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
@@ -11,8 +15,11 @@ export const login = async (req: Request, res: Response) => {
     // For MVP, we might seed a dummy user or just accept anything for now if not set
     // const user = await prisma.user.findUnique({ where: { username } });
 
+    // Generate actual JWT so it passes the authMiddleware verify
+    const token = jwt.sign({ username, role: 'admin' }, JWT_SECRET, { expiresIn: '1h' });
+
     res.status(200).json({
-      token: 'dummy-jwt-token',
+      token: token,
       user: { username, role: 'admin' }
     });
   } catch (error) {
