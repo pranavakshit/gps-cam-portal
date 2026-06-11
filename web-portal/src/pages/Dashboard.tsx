@@ -59,7 +59,7 @@ const Dashboard: React.FC = () => {
     navigate('/');
   };
 
-  const handleDownload = (url: string, filename: string) => {
+  const handleDownload = (url: string, _filename: string) => {
     // In a real app, this would fetch the blob and trigger download
     window.open(url, '_blank');
   };
