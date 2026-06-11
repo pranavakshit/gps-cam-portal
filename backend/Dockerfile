@@ -1,10 +1,11 @@
-FROM node:20-alpine
+FROM node:20
 
 WORKDIR /app
 
 # Copy package files and install dependencies
 COPY package*.json ./
 COPY tsconfig.json ./
+COPY prisma.config.ts ./
 COPY prisma ./prisma/
 
 RUN npm install

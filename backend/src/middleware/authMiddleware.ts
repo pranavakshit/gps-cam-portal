@@ -22,7 +22,7 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
       return;
     }
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
+    jwt.verify(token, JWT_SECRET, (err: jwt.VerifyErrors | null, user: any) => {
       if (err) {
         res.status(403).json({ error: 'Forbidden or Token Expired' });
         return;

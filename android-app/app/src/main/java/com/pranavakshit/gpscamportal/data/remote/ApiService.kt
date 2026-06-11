@@ -23,7 +23,7 @@ interface ApiService {
     ): Response<Unit>
 
     companion object {
-        private const val BASE_URL = "http://10.0.2.2:5001/" // Emulator default
+        private const val BASE_URL = "http://localhost:5000/" // Uses adb reverse
 
         fun create(): ApiService {
             val retrofit = Retrofit.Builder()

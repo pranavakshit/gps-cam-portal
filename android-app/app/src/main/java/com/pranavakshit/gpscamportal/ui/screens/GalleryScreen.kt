@@ -1,6 +1,7 @@
 package com.pranavakshit.gpscamportal.ui.screens
 
 import android.widget.Toast
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -14,7 +15,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.pranavakshit.gpscamportal.data.local.AppDatabase
+import com.pranavakshit.gpscamportal.data.local.PhotoEntity
 import com.pranavakshit.gpscamportal.data.remote.ApiService
+import androidx.compose.runtime.livedata.observeAsState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -34,7 +37,7 @@ fun GalleryScreen(
     val coroutineScope = rememberCoroutineScope()
     val dao = remember { AppDatabase.getDatabase(context).photoDao() }
     
-    val pendingPhotos by dao.getPendingUploads().collectAsState(initial = emptyList())
+    val pendingPhotos by dao.getPendingUploads().observeAsState(initial = emptyList())
     var isUploading by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -61,6 +64,8 @@ fun GalleryScreen(
                             coroutineScope.launch(Dispatchers.IO) {
                                 val api = ApiService.create()
                                 var uploadedCount = 0
+                                var failedCount = 0
+                                var lastErrorMsg = ""
                                 
                                 for (photo in pendingPhotos) {
                                     val file = File(photo.imageUri)
@@ -81,17 +86,29 @@ fun GalleryScreen(
                                     try {
                                         val response = api.uploadPhoto(uploaderBody, locNameBody, latBody, lngBody, timeBody, body)
                                         if (response.isSuccessful) {
-                                            dao.markAsUploaded(listOf(photo.id))
+                                            val ids = listOf(photo.id)
+                                            dao.markAsUploaded(ids)
                                             uploadedCount++
+                                        } else {
+                                            val errorBody = response.errorBody()?.string()
+                                            Log.e("Upload", "HTTP Error: ${response.code()} - $errorBody")
+                                            lastErrorMsg = "Server error ${response.code()}"
+                                            failedCount++
                                         }
                                     } catch (e: Exception) {
-                                        e.printStackTrace()
+                                        Log.e("Upload", "Exception during upload", e)
+                                        lastErrorMsg = e.localizedMessage ?: "Unknown error"
+                                        failedCount++
                                     }
                                 }
                                 
                                 launch(Dispatchers.Main) {
                                     isUploading = false
-                                    Toast.makeText(context, "Uploaded $uploadedCount photos", Toast.LENGTH_SHORT).show()
+                                    if (failedCount > 0) {
+                                        Toast.makeText(context, "Uploaded $uploadedCount. Failed: $failedCount. Error: $lastErrorMsg", Toast.LENGTH_LONG).show()
+                                    } else {
+                                        Toast.makeText(context, "Uploaded $uploadedCount photos", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             }
                         },

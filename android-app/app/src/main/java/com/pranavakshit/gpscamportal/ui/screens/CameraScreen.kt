@@ -165,14 +165,14 @@ private fun CameraPreviewContent(
                                         val uploader = UserPreferences(context).getUploaderName() ?: "Unknown"
                                         val dao = AppDatabase.getDatabase(context).photoDao()
                                         
-                                        dao.insertPhoto(PhotoEntity(
-                                            locationName = area,
-                                            latitude = lat,
-                                            longitude = lng,
-                                            timestamp = timestamp,
-                                            imageUri = file.absolutePath,
-                                            uploader = uploader
-                                        ))
+                                        val entity = PhotoEntity()
+                                        entity.locationName = area
+                                        entity.latitude = lat
+                                        entity.longitude = lng
+                                        entity.timestamp = timestamp
+                                        entity.imageUri = file.absolutePath
+                                        entity.uploader = uploader
+                                        dao.insertPhoto(entity)
                                         
                                         launch(Dispatchers.Main) {
                                             isCapturing = false
