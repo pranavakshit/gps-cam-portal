@@ -1,30 +1,35 @@
-Write-Host "=======================================================" -ForegroundColor Cyan
-Write-Host "   Starting GPS Cam Portal via Docker Containers   " -ForegroundColor Cyan
-Write-Host "=======================================================" -ForegroundColor Cyan
-Write-Host ""
+param()
 
-Write-Host "Building and starting containers in the background..." -ForegroundColor Yellow
-docker compose up --build -d
+Write-Host "Starting GPS Cam Portal Environment..." -ForegroundColor Green
+docker compose up -d
 
-Start-Sleep -Seconds 3
+Write-Host "Environment is starting up in the background." -ForegroundColor Cyan
+Write-Host "Tailing logs... (Press 'q' at any time to gracefully stop)" -ForegroundColor Yellow
 
-# Fetch the dynamically assigned host ports
-$WebPortMapping = docker compose port web-portal 80
-$ApiPortMapping = docker compose port backend 5001
+$logJob = Start-Job {
+    Set-Location $args[0]
+    docker compose logs -f
+} -ArgumentList $PWD
 
-$WebUrl = "http://" + ($WebPortMapping -replace '0.0.0.0', 'localhost')
-$ApiUrl = "http://" + ($ApiPortMapping -replace '0.0.0.0', 'localhost')
-
-Write-Host ""
-Write-Host "Docker containers are starting up! You can access them at:" -ForegroundColor Green
-Write-Host "-------------------------------------------------------"
-Write-Host "🌐 Web Admin Portal : $WebUrl" -ForegroundColor Cyan
-Write-Host "⚙️  Backend API      : $ApiUrl" -ForegroundColor Cyan
-Write-Host "🗄️  MySQL Database   : localhost:3306" -ForegroundColor Cyan
-Write-Host "-------------------------------------------------------"
-Write-Host ""
-Write-Host "To view logs, run: docker compose logs -f"
-Write-Host "To stop servers, run: docker compose down"
-Write-Host ""
-Write-Host "Press any key to exit this script..."
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+try {
+    while ($true) {
+        if ($Host.UI.RawUI.KeyAvailable) {
+            $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+            if ($key.Character -eq 'q' -or $key.Character -eq 'Q') {
+                break
+            }
+        }
+        
+        $events = Receive-Job $logJob
+        foreach ($event in $events) {
+            Write-Host $event
+        }
+        Start-Sleep -Milliseconds 100
+    }
+} finally {
+    Write-Host "`nStopping environment gracefully..." -ForegroundColor Yellow
+    Stop-Job $logJob
+    Remove-Job $logJob
+    docker compose stop
+    Write-Host "Environment stopped." -ForegroundColor Green
+}
