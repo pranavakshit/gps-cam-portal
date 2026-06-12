@@ -40,7 +40,14 @@ fun GPSCamPortalApp() {
         Screen.LOGIN -> {
             LoginScreen(
                 onLoginSuccess = {
-                    currentScreen = Screen.LOCATION
+                    currentScreen = Screen.GALLERY
+                }
+            )
+        }
+        Screen.GALLERY -> {
+            com.pranavakshit.gpscamportal.ui.screens.GalleryScreen(
+                onNavigateBack = {
+                    currentScreen = Screen.LOCATION // Reusing this prop name for the camera icon click
                 }
             )
         }
@@ -60,17 +67,11 @@ fun GPSCamPortalApp() {
                 district = selectedDistrict,
                 area = selectedArea,
                 onPhotoSaved = {
-                    // Stay on Camera Screen to take more photos, or notify
+                    // Stay on Camera Screen to take more photos, or return to gallery
+                    currentScreen = Screen.GALLERY
                 },
                 onNavigateToGallery = {
                     currentScreen = Screen.GALLERY
-                }
-            )
-        }
-        Screen.GALLERY -> {
-            com.pranavakshit.gpscamportal.ui.screens.GalleryScreen(
-                onNavigateBack = {
-                    currentScreen = Screen.CAMERA
                 }
             )
         }

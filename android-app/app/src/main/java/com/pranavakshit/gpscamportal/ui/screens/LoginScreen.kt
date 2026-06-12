@@ -6,8 +6,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.pranavakshit.gpscamportal.data.remote.ApiService
+import com.pranavakshit.gpscamportal.data.remote.LoginRequest
 import com.pranavakshit.gpscamportal.util.UserPreferences
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -16,13 +20,16 @@ fun LoginScreen(
 ) {
     val context = LocalContext.current
     val userPreferences = remember { UserPreferences(context) }
+    val scope = rememberCoroutineScope()
     
-    var uploaderName by remember { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
 
     // Check if already logged in
     LaunchedEffect(Unit) {
-        if (!userPreferences.getUploaderName().isNullOrBlank()) {
+        if (!userPreferences.getToken().isNullOrBlank()) {
             onLoginSuccess()
         }
     }
@@ -47,37 +54,50 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Offline Uploader Setup",
+                text = "Secure Login",
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Text(
-                text = "Enter your name or ID to tag the photos you capture offline.",
+                text = "Please enter your admin-provided credentials.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
             OutlinedTextField(
-                value = uploaderName,
+                value = username,
                 onValueChange = { 
-                    uploaderName = it
-                    showError = false 
+                    username = it
+                    errorMessage = null 
                 },
-                label = { Text("Uploader Name / ID") },
-                isError = showError,
+                label = { Text("Username") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+            
+            Spacer(modifier = Modifier.height(16.dp))
 
-            if (showError) {
+            OutlinedTextField(
+                value = password,
+                onValueChange = { 
+                    password = it
+                    errorMessage = null 
+                },
+                label = { Text("Password") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (errorMessage != null) {
                 Text(
-                    text = "Please enter a valid name",
+                    text = errorMessage!!,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier
                         .align(Alignment.Start)
-                        .padding(start = 16.dp, top = 4.dp)
+                        .padding(start = 16.dp, top = 8.dp)
                 )
             }
 
@@ -85,18 +105,41 @@ fun LoginScreen(
 
             Button(
                 onClick = {
-                    if (uploaderName.isNotBlank()) {
-                        userPreferences.saveUploaderName(uploaderName.trim())
-                        onLoginSuccess()
-                    } else {
-                        showError = true
+                    if (username.isBlank() || password.isBlank()) {
+                        errorMessage = "Please enter both username and password"
+                        return@Button
+                    }
+                    
+                    isLoading = true
+                    scope.launch {
+                        try {
+                            val apiService = ApiService.create()
+                            val response = apiService.login(LoginRequest(username, password))
+                            
+                            if (response.isSuccessful && response.body() != null) {
+                                val body = response.body()!!
+                                userPreferences.saveAuthData(body.token, body.user.username)
+                                onLoginSuccess()
+                            } else {
+                                errorMessage = "Invalid credentials or network error"
+                            }
+                        } catch (e: Exception) {
+                            errorMessage = "Failed to connect to the server"
+                        } finally {
+                            isLoading = false
+                        }
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
+                    .height(50.dp),
+                enabled = !isLoading
             ) {
-                Text("Continue Offline")
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                } else {
+                    Text("Login")
+                }
             }
         }
     }

@@ -31,7 +31,7 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GalleryScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit // This actually navigates to Camera/Location now based on MainActivity
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -44,16 +44,16 @@ fun GalleryScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Offline Gallery") },
-                navigationIcon = {
-                    Button(onClick = onNavigateBack, modifier = Modifier.padding(start = 8.dp)) {
-                        Text("Back")
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onNavigateBack) {
+                Text("📷")
+            }
         },
         bottomBar = {
             if (pendingPhotos.isNotEmpty()) {
