@@ -162,11 +162,11 @@ private fun CameraPreviewContent(
                                     )
                                     
                                     if (success) {
-                                        val uploader = UserPreferences(context).getUploaderName() ?: "Unknown"
+                                        val uploader = UserPreferences(context).getUsername() ?: "Unknown"
                                         val dao = AppDatabase.getDatabase(context).photoDao()
                                         
                                         val entity = PhotoEntity()
-                                        entity.locationName = area
+                                        entity.locationName = "$area, $district, $state"
                                         entity.latitude = lat
                                         entity.longitude = lng
                                         entity.timestamp = timestamp

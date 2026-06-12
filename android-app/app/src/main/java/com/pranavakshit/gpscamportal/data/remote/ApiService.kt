@@ -9,8 +9,26 @@ import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
 
+import retrofit2.http.Body
+import retrofit2.http.GET
+
 interface ApiService {
     
+    @POST("/api/auth/login")
+    suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
+
+    @GET("/api/locations/states")
+    suspend fun getStates(): Response<List<StateDto>>
+
+    @GET("/api/locations/states/{id}/offline-bundle")
+    suspend fun getOfflineBundle(@retrofit2.http.Path("id") stateCode: Int): Response<OfflineBundleDto>
+
+    @GET("/api/locations/search")
+    suspend fun searchLocations(
+        @retrofit2.http.Query("q") query: String,
+        @retrofit2.http.Query("stateCode") stateCode: Int
+    ): Response<List<SearchResultDto>>
+
     @Multipart
     @POST("/api/photos/upload")
     suspend fun uploadPhoto(
@@ -23,7 +41,7 @@ interface ApiService {
     ): Response<Unit>
 
     companion object {
-        private const val BASE_URL = "http://localhost:5000/" // Uses adb reverse
+        private const val BASE_URL = "http://192.168.31.77:5000/"
 
         fun create(): ApiService {
             val retrofit = Retrofit.Builder()
