@@ -53,7 +53,7 @@ fun LocationScreen(
         }
         
         try {
-            val apiService = ApiService.create()
+            val apiService = ApiService.create(context)
             val response = apiService.getStates()
             if (response.isSuccessful && response.body() != null) {
                 states = response.body()!!
@@ -70,7 +70,7 @@ fun LocationScreen(
         if (searchQuery.length >= 2) {
             if (selectedState == null) return@LaunchedEffect
             try {
-                val apiService = ApiService.create()
+                val apiService = ApiService.create(context)
                 val response = apiService.searchLocations(searchQuery, selectedState!!.lgdCode)
                 if (response.isSuccessful) {
                     searchResults = response.body() ?: emptyList()
@@ -85,7 +85,7 @@ fun LocationScreen(
         scope.launch {
             isLoading = true
             try {
-                val apiService = ApiService.create()
+                val apiService = ApiService.create(context)
                 val response = apiService.getOfflineBundle(state.lgdCode)
                 if (response.isSuccessful && response.body() != null) {
                     val bundle = response.body()!!

@@ -34,6 +34,7 @@ java_pid*.hprof
 backend/uploads/
 backend/prisma/*.db
 backend/prisma/*.db-journal
+android-app/app/release.keystore
 
 # Web Portal
 web-portal/dist/

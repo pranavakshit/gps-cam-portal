@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class Screen {
-    LOGIN, LOCATION, CAMERA, GALLERY
+    LOGIN, DASHBOARD, LOCATION, CAMERA, OFFLINE_GALLERY
 }
 
 @Composable
@@ -40,14 +40,27 @@ fun GPSCamPortalApp() {
         Screen.LOGIN -> {
             LoginScreen(
                 onLoginSuccess = {
-                    currentScreen = Screen.GALLERY
+                    currentScreen = Screen.DASHBOARD
                 }
             )
         }
-        Screen.GALLERY -> {
+        Screen.DASHBOARD -> {
+            com.pranavakshit.gpscamportal.ui.screens.DashboardScreen(
+                onNavigateToCamera = {
+                    currentScreen = Screen.LOCATION
+                },
+                onNavigateToOfflineGallery = {
+                    currentScreen = Screen.OFFLINE_GALLERY
+                },
+                onLogout = {
+                    currentScreen = Screen.LOGIN
+                }
+            )
+        }
+        Screen.OFFLINE_GALLERY -> {
             com.pranavakshit.gpscamportal.ui.screens.GalleryScreen(
                 onNavigateBack = {
-                    currentScreen = Screen.LOCATION // Reusing this prop name for the camera icon click
+                    currentScreen = Screen.DASHBOARD 
                 }
             )
         }
@@ -67,11 +80,10 @@ fun GPSCamPortalApp() {
                 district = selectedDistrict,
                 area = selectedArea,
                 onPhotoSaved = {
-                    // Stay on Camera Screen to take more photos, or return to gallery
-                    currentScreen = Screen.GALLERY
+                    currentScreen = Screen.OFFLINE_GALLERY
                 },
                 onNavigateToGallery = {
-                    currentScreen = Screen.GALLERY
+                    currentScreen = Screen.OFFLINE_GALLERY
                 }
             )
         }

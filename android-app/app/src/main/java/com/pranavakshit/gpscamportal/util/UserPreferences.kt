@@ -9,16 +9,19 @@ class UserPreferences(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
     private val gson = Gson()
 
-    fun saveAuthData(token: String, username: String) {
+    fun saveAuthData(token: String, username: String, role: String) {
         prefs.edit()
             .putString(KEY_TOKEN, token)
             .putString(KEY_USERNAME, username)
+            .putString(KEY_ROLE, role)
             .apply()
     }
 
     fun getToken(): String? = prefs.getString(KEY_TOKEN, null)
     
     fun getUsername(): String? = prefs.getString(KEY_USERNAME, null)
+    
+    fun getRole(): String? = prefs.getString(KEY_ROLE, null)
 
     fun saveOfflineBundle(bundle: OfflineBundleDto) {
         val jsonString = gson.toJson(bundle)
@@ -41,6 +44,7 @@ class UserPreferences(context: Context) {
     companion object {
         private const val KEY_TOKEN = "auth_token"
         private const val KEY_USERNAME = "username"
+        private const val KEY_ROLE = "role"
         private const val KEY_OFFLINE_BUNDLE = "offline_bundle"
     }
 }

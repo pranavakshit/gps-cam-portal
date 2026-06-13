@@ -14,11 +14,17 @@ public interface PhotoDao {
     @Query("SELECT * FROM photos ORDER BY timestamp DESC")
     LiveData<List<PhotoEntity>> getAllPhotos();
 
-    @Query("SELECT * FROM photos WHERE isUploaded = 0 ORDER BY timestamp DESC")
+    @Query("SELECT * FROM photos WHERE isUploaded = 0 AND isDeleted = 0 ORDER BY timestamp DESC")
     LiveData<List<PhotoEntity>> getPendingUploads();
+
+    @Query("SELECT * FROM photos WHERE isDeleted = 1 ORDER BY timestamp DESC")
+    LiveData<List<PhotoEntity>> getDeletedPhotos();
 
     @Query("UPDATE photos SET isUploaded = 1 WHERE id IN (:photoIds)")
     void markAsUploaded(List<Integer> photoIds);
+
+    @Query("UPDATE photos SET isDeleted = 1 WHERE id = :id")
+    void softDeletePhoto(int id);
 
     @Query("DELETE FROM photos WHERE id = :id")
     void deletePhoto(int id);

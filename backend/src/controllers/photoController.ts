@@ -93,10 +93,17 @@ export const getPhotos = async (req: AuthRequest, res: Response): Promise<void> 
   try {
     const userRole = req.user?.role;
     const userId = req.user?.id;
+    const isRecycleBin = req.query.recycle_bin === 'true';
     
-    let whereClause = {};
+    let whereClause: any = {};
     if (userRole !== 'ADMIN') {
         whereClause = { userId: userId };
+    }
+    
+    if (isRecycleBin) {
+      whereClause.deletionStatus = 'DELETED_SOFT';
+    } else {
+      whereClause.deletionStatus = { not: 'DELETED_SOFT' };
     }
 
     const photos = await prisma.photo.findMany({
@@ -131,13 +138,83 @@ export const getPhotos = async (req: AuthRequest, res: Response): Promise<void> 
           longitude: p.longitude,
           timestamp: p.timestamp,
           imageUrl: p.imageUrl,
-          uploader: p.user.username
+          uploader: p.user.username,
+          deletionStatus: p.deletionStatus,
+          deletionReason: p.deletionReason
         };
     });
 
     res.status(200).json(transformed);
   } catch (error) {
     console.error('Get photos error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const requestDeletePhoto = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    
+    const photo = await prisma.photo.findUnique({ where: { id: Number(id) } });
+    if (!photo) {
+      res.status(404).json({ error: 'Photo not found' });
+      return;
+    }
+
+    const isAdmin = req.user?.role === 'ADMIN';
+    const isOwner = req.user?.id === photo.userId;
+
+    if (!isAdmin && !isOwner) {
+      res.status(403).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const newStatus = isAdmin ? 'ADMIN_REQUESTED' : 'USER_REQUESTED';
+    
+    const updated = await prisma.photo.update({
+      where: { id: Number(id) },
+      data: {
+        deletionStatus: newStatus,
+        deletionReason: reason || null
+      }
+    });
+
+    res.status(200).json({ message: 'Deletion requested successfully', photo: updated });
+  } catch (error) {
+    console.error('Request delete error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const approveDeletePhoto = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    if (req.user?.role !== 'ADMIN') {
+      res.status(403).json({ error: 'Only admins can approve deletion requests' });
+      return;
+    }
+
+    const photo = await prisma.photo.findUnique({ where: { id: Number(id) } });
+    if (!photo) {
+      res.status(404).json({ error: 'Photo not found' });
+      return;
+    }
+
+    if (photo.deletionStatus !== 'USER_REQUESTED') {
+      res.status(400).json({ error: 'Photo is not in USER_REQUESTED state' });
+      return;
+    }
+
+    const updated = await prisma.photo.update({
+      where: { id: Number(id) },
+      data: { deletionStatus: 'ADMIN_APPROVED' }
+    });
+
+    res.status(200).json({ message: 'Deletion approved successfully', photo: updated });
+  } catch (error) {
+    console.error('Approve delete error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -155,21 +232,26 @@ export const deletePhoto = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
     
-    if (req.user?.role !== 'ADMIN' && req.user?.id !== photo.userId) {
+    const isAdmin = req.user?.role === 'ADMIN';
+    const isOwner = req.user?.id === photo.userId;
+
+    if (!isAdmin && !isOwner) {
       res.status(403).json({ error: 'Unauthorized to delete this photo' });
       return;
     }
     
-    await prisma.photo.delete({
-      where: { id: Number(id) }
-    });
-    
-    const filePath = path.join(__dirname, '../../', photo.imageUrl);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    if (!isAdmin && photo.deletionStatus !== 'ADMIN_APPROVED' && photo.deletionStatus !== 'ADMIN_REQUESTED') {
+      res.status(400).json({ error: 'Deletion must be approved by an admin first' });
+      return;
     }
     
-    res.status(200).json({ message: 'Photo deleted successfully' });
+    // Soft Delete
+    await prisma.photo.update({
+      where: { id: Number(id) },
+      data: { deletionStatus: 'DELETED_SOFT' }
+    });
+    
+    res.status(200).json({ message: 'Photo softly deleted successfully' });
   } catch (error) {
     console.error('Delete photo error:', error);
     res.status(500).json({ error: 'Internal server error' });

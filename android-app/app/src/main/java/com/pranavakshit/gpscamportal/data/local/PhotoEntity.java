@@ -14,4 +14,5 @@ public class PhotoEntity {
     public String imageUri;
     public String uploader;
     public boolean isUploaded;
+    public boolean isDeleted;
 }

@@ -1,11 +1,17 @@
 package com.pranavakshit.gpscamportal.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.pranavakshit.gpscamportal.data.remote.ApiService
@@ -19,6 +25,7 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit
 ) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val userPreferences = remember { UserPreferences(context) }
     val scope = rememberCoroutineScope()
     
@@ -31,6 +38,34 @@ fun LoginScreen(
     LaunchedEffect(Unit) {
         if (!userPreferences.getToken().isNullOrBlank()) {
             onLoginSuccess()
+        }
+    }
+
+    val handleLogin = {
+        if (username.isBlank() || password.isBlank()) {
+            errorMessage = "Please enter both username and password"
+        } else {
+            isLoading = true
+            scope.launch {
+                try {
+                    val apiService = ApiService.create(context)
+                    val trimmedUsername = username.trim()
+                    val trimmedPassword = password.trim()
+                    val response = apiService.login(LoginRequest(trimmedUsername, trimmedPassword))
+                    
+                    if (response.isSuccessful && response.body() != null) {
+                        val body = response.body()!!
+                        userPreferences.saveAuthData(body.token, body.user.username, body.user.role)
+                        onLoginSuccess()
+                    } else {
+                        errorMessage = "Invalid credentials or network error"
+                    }
+                } catch (e: Exception) {
+                    errorMessage = "Failed to connect to the server"
+                } finally {
+                    isLoading = false
+                }
+            }
         }
     }
 
@@ -73,6 +108,8 @@ fun LoginScreen(
                 },
                 label = { Text("Username") },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                 modifier = Modifier.fillMaxWidth()
             )
             
@@ -87,6 +124,11 @@ fun LoginScreen(
                 label = { Text("Password") },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { 
+                    focusManager.clearFocus()
+                    handleLogin() 
+                }),
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -104,34 +146,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = {
-                    if (username.isBlank() || password.isBlank()) {
-                        errorMessage = "Please enter both username and password"
-                        return@Button
-                    }
-                    
-                    isLoading = true
-                    scope.launch {
-                        try {
-                            val apiService = ApiService.create()
-                            val trimmedUsername = username.trim()
-                            val trimmedPassword = password.trim()
-                            val response = apiService.login(LoginRequest(trimmedUsername, trimmedPassword))
-                            
-                            if (response.isSuccessful && response.body() != null) {
-                                val body = response.body()!!
-                                userPreferences.saveAuthData(body.token, body.user.username)
-                                onLoginSuccess()
-                            } else {
-                                errorMessage = "Invalid credentials or network error"
-                            }
-                        } catch (e: Exception) {
-                            errorMessage = "Failed to connect to the server"
-                        } finally {
-                            isLoading = false
-                        }
-                    }
-                },
+                onClick = { handleLogin() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),

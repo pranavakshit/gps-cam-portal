@@ -144,5 +144,8 @@ model Photo {
   imageUrl        String   @map("image_url")
   uploadedAt      DateTime @default(now()) @map("uploaded_at")
 
+  deletionStatus  String   @default("NONE") @map("deletion_status")
+  deletionReason  String?  @map("deletion_reason")
+
   user User @relation(fields: [userId], references: [id])
 }
