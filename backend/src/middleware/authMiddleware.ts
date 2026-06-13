@@ -35,3 +35,11 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
     res.status(401).json({ error: 'Unauthorized' });
   }
 };
+
+export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  if (req.user && req.user.role === 'ADMIN') {
+    next();
+  } else {
+    res.status(403).json({ error: 'Forbidden: Admin access required' });
+  }
+};

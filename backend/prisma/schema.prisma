@@ -15,22 +15,134 @@ model User {
   photos        Photo[]
 }
 
-model Location {
-  id       Int    @id @default(autoincrement())
-  state    String
-  district String
-  area     String
+model LgdState {
+  id        Int           @id @default(autoincrement())
+  lgdCode   Int           @unique @map("lgd_code")
+  name      String
+  districts LgdDistrict[]
+  
+  @@index([name])
+}
+
+model LgdDistrict {
+  id           Int              @id @default(autoincrement())
+  lgdCode      Int              @unique @map("lgd_code")
+  name         String
+  stateCode    Int              @map("state_code")
+  state        LgdState         @relation(fields: [stateCode], references: [lgdCode], onDelete: Cascade)
+  
+  subDistricts LgdSubDistrict[]
+  blocks       LgdBlock[]
+  panchayats   LgdGramPanchayat[]
+  ulbs         LgdUlb[]
+
+  @@index([name])
+}
+
+model LgdSubDistrict {
+  id           Int          @id @default(autoincrement())
+  lgdCode      Int          @unique @map("lgd_code")
+  name         String
+  districtCode Int          @map("district_code")
+  district     LgdDistrict  @relation(fields: [districtCode], references: [lgdCode], onDelete: Cascade)
+  villages     LgdVillage[]
+
+  @@index([name])
+}
+
+model LgdVillage {
+  id              Int            @id @default(autoincrement())
+  lgdCode         Int            @unique @map("lgd_code")
+  name            String
+  subDistrictCode Int            @map("subdistrict_code")
+  subDistrict     LgdSubDistrict @relation(fields: [subDistrictCode], references: [lgdCode], onDelete: Cascade)
+
+  @@index([name])
+}
+
+model LgdBlock {
+  id           Int         @id @default(autoincrement())
+  lgdCode      Int         @unique @map("lgd_code")
+  name         String
+  districtCode Int         @map("district_code")
+  district     LgdDistrict @relation(fields: [districtCode], references: [lgdCode], onDelete: Cascade)
+
+  @@index([name])
+}
+
+model LgdGramPanchayat {
+  id           Int         @id @default(autoincrement())
+  lgdCode      Int         @unique @map("lgd_code")
+  name         String
+  districtCode Int         @map("district_code")
+  district     LgdDistrict @relation(fields: [districtCode], references: [lgdCode], onDelete: Cascade)
+
+  @@index([name])
+}
+
+model LgdUlb {
+  id           Int         @id @default(autoincrement())
+  lgdCode      Int         @unique @map("lgd_code")
+  name         String
+  districtCode Int         @map("district_code")
+  district     LgdDistrict @relation(fields: [districtCode], references: [lgdCode], onDelete: Cascade)
+  wards        LgdWard[]
+
+  @@index([name])
+}
+
+model LgdWard {
+  id      Int    @id @default(autoincrement())
+  lgdCode Int    @unique @map("lgd_code")
+  name    String
+  ulbCode Int    @map("ulb_code")
+  ulb     LgdUlb @relation(fields: [ulbCode], references: [lgdCode], onDelete: Cascade)
+
+  @@index([name])
+}
+
+model VillageLocalBodyMapping {
+  id           Int @id @default(autoincrement())
+  villageCode  Int @map("village_code")
+  localBodyCode Int @map("local_body_code")
+  
+  @@unique([villageCode, localBodyCode])
+}
+
+model BlockVillageMapping {
+  id          Int @id @default(autoincrement())
+  blockCode   Int @map("block_code")
+  villageCode Int @map("village_code")
+
+  @@unique([blockCode, villageCode])
+}
+
+model PanchayatVillageMapping {
+  id            Int @id @default(autoincrement())
+  panchayatCode Int @map("panchayat_code")
+  villageCode   Int @map("village_code")
+
+  @@unique([panchayatCode, villageCode])
 }
 
 model Photo {
-  id            Int      @id @default(autoincrement())
-  userId        Int      @map("user_id")
-  locationName  String   @map("location_name")
-  latitude      Decimal  @db.Decimal(10, 8)
-  longitude     Decimal  @db.Decimal(11, 8)
-  timestamp     DateTime
-  imageUrl      String   @map("image_url")
-  uploadedAt    DateTime @default(now()) @map("uploaded_at")
+  id              Int      @id @default(autoincrement())
+  userId          Int      @map("user_id")
+  
+  // Location Hierarchy References
+  stateCode       Int?     @map("state_code")
+  districtCode    Int?     @map("district_code")
+  subdistrictCode Int?     @map("subdistrict_code")
+  villageCode     Int?     @map("village_code")
+  ulbCode         Int?     @map("ulb_code")
+  wardCode        Int?     @map("ward_code")
+  locationName    String?  @map("location_name")
+  
+  latitude        Decimal  @db.Decimal(10, 8)
+  longitude       Decimal  @db.Decimal(11, 8)
+  timestamp       DateTime
+  imageUrl        String   @map("image_url")
+  uploadedAt      DateTime @default(now()) @map("uploaded_at")
 
   user User @relation(fields: [userId], references: [id])
 }
