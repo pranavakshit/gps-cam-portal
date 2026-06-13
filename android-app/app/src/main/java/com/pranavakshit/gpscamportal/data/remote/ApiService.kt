@@ -44,7 +44,11 @@ interface ApiService {
         private const val BASE_URL = "https://api.pranavakshit.in/"
 
         fun create(): ApiService {
+            val logging = okhttp3.logging.HttpLoggingInterceptor()
+            logging.setLevel(okhttp3.logging.HttpLoggingInterceptor.Level.BODY)
+
             val okHttpClient = okhttp3.OkHttpClient.Builder()
+                .addInterceptor(logging)
                 .addInterceptor { chain ->
                     val original = chain.request()
                     val request = original.newBuilder()

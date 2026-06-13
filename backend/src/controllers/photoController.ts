@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { AuthRequest } from '../middleware/authMiddleware';
 import prisma from '../db/prisma';
 import multer from 'multer';
 import path from 'path';
@@ -88,9 +89,18 @@ export const uploadPhoto = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const getPhotos = async (req: Request, res: Response): Promise<void> => {
+export const getPhotos = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const userRole = req.user?.role;
+    const userId = req.user?.id;
+    
+    let whereClause = {};
+    if (userRole !== 'ADMIN') {
+        whereClause = { userId: userId };
+    }
+
     const photos = await prisma.photo.findMany({
+      where: whereClause,
       include: {
         user: {
           select: { id: true, username: true }
@@ -128,6 +138,40 @@ export const getPhotos = async (req: Request, res: Response): Promise<void> => {
     res.status(200).json(transformed);
   } catch (error) {
     console.error('Get photos error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const deletePhoto = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    const photo = await prisma.photo.findUnique({
+      where: { id: Number(id) }
+    });
+    
+    if (!photo) {
+      res.status(404).json({ error: 'Photo not found' });
+      return;
+    }
+    
+    if (req.user?.role !== 'ADMIN' && req.user?.id !== photo.userId) {
+      res.status(403).json({ error: 'Unauthorized to delete this photo' });
+      return;
+    }
+    
+    await prisma.photo.delete({
+      where: { id: Number(id) }
+    });
+    
+    const filePath = path.join(__dirname, '../../', photo.imageUrl);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    
+    res.status(200).json({ message: 'Photo deleted successfully' });
+  } catch (error) {
+    console.error('Delete photo error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

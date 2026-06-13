@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, MapPin, Calendar, Download, Search, LogOut } from 'lucide-react';
+import { Camera, MapPin, Calendar, Download, Search, LogOut, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import LocationsManager from '../components/LocationsManager';
 import UsersManager from '../components/UsersManager';
@@ -16,35 +16,7 @@ interface Photo {
   uploader: string;
 }
 
-const MOCK_PHOTOS: Photo[] = [
-  {
-    id: 1,
-    locationName: 'Central Park',
-    latitude: 40.7812,
-    longitude: -73.9665,
-    timestamp: '2026-06-11T10:00:00Z',
-    imageUrl: 'https://images.unsplash.com/photo-1513415564515-763d91423bdd?auto=format&fit=crop&w=600&q=80',
-    uploader: 'John Doe',
-  },
-  {
-    id: 2,
-    locationName: 'Statue of Liberty',
-    latitude: 40.6892,
-    longitude: -74.0445,
-    timestamp: '2026-06-10T14:30:00Z',
-    imageUrl: 'https://images.unsplash.com/photo-1543789523-289cf1862cd2?auto=format&fit=crop&w=600&q=80',
-    uploader: 'Jane Smith',
-  },
-  {
-    id: 3,
-    locationName: 'Times Square',
-    latitude: 40.7580,
-    longitude: -73.9855,
-    timestamp: '2026-06-09T20:15:00Z',
-    imageUrl: 'https://images.unsplash.com/photo-1534430480872-3498386e7856?auto=format&fit=crop&w=600&q=80',
-    uploader: 'John Doe',
-  }
-];
+
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -52,6 +24,7 @@ const Dashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'gallery' | 'locations' | 'users' | 'docker'>('gallery');
   const userRole = localStorage.getItem('role') || 'user';
+  const username = localStorage.getItem('username') || '';
 
   useEffect(() => {
     if (activeTab === 'gallery') {
@@ -130,6 +103,31 @@ const Dashboard: React.FC = () => {
 
   const handleDownload = (url: string, _filename: string) => {
     window.open(url, '_blank');
+  };
+
+  const handleDeletePhoto = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this photo?")) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${API_URL}/api/photos/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        setPhotos(photos.filter(p => p.id !== id));
+      } else {
+        const errorData = await response.json().catch(() => null);
+        alert(`Failed to delete photo: ${errorData?.error || response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      alert('An error occurred while deleting the photo.');
+    }
   };
 
   const filteredPhotos = photos.filter(photo => 
@@ -236,6 +234,16 @@ const Dashboard: React.FC = () => {
                       >
                         <Download size={20} />
                       </button>
+                      {(userRole === 'ADMIN' || photo.uploader === username) && (
+                        <button 
+                          className="btn btn-danger icon-btn"
+                          onClick={() => handleDeletePhoto(photo.id)}
+                          title="Delete Photo"
+                          style={{ marginLeft: '8px' }}
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="photo-info">

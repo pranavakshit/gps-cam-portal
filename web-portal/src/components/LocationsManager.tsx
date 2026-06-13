@@ -36,6 +36,8 @@ const LocationsManager: React.FC = () => {
   const [newName, setNewName] = useState('');
   const [newCode, setNewCode] = useState('');
 
+  const userRole = localStorage.getItem('role') || 'user';
+
   const fetchItems = async () => {
     setLoadingItems(true);
     try {
@@ -318,8 +320,9 @@ const LocationsManager: React.FC = () => {
       </div>
 
       <div className="locations-layout">
-        <div className="upload-sidebar glass-panel">
-          <div className="upload-box compact">
+        {userRole === 'ADMIN' && (
+          <div className="upload-sidebar glass-panel">
+            <div className="upload-box compact">
             <Upload size={32} className="upload-icon" />
             <h3>Upload LGD ZIP</h3>
             <p className="small-text">Synchronize database from official LGD package.</p>
@@ -358,6 +361,7 @@ const LocationsManager: React.FC = () => {
             </div>
           )}
         </div>
+        )}
 
         <div className="data-explorer glass-panel">
           <div className="explorer-toolbar">
@@ -389,11 +393,13 @@ const LocationsManager: React.FC = () => {
                   <div className="loader">Loading...</div>
                 ) : (
                   <>
-                    <div className="list-actions">
-                      <button className="btn btn-sm btn-outline" onClick={() => setIsAdding(true)}>
-                        <Plus size={14}/> Add Custom {currentLevelType()}
-                      </button>
-                    </div>
+                    {userRole === 'ADMIN' && (
+                      <div className="list-actions">
+                        <button className="btn btn-sm btn-outline" onClick={() => setIsAdding(true)}>
+                          <Plus size={14}/> Add Custom {currentLevelType()}
+                        </button>
+                      </div>
+                    )}
                     
                     {isAdding && (
                       <div className="list-item adding-item">
@@ -425,16 +431,18 @@ const LocationsManager: React.FC = () => {
                           )}
                         </div>
                         <div className="item-actions">
-                          {editingId === item.lgdCode ? (
-                            <>
-                              <button className="icon-btn success" onClick={() => handleUpdate(item.lgdCode, editName)}><Save size={16}/></button>
-                              <button className="icon-btn" onClick={() => setEditingId(null)}><X size={16}/></button>
-                            </>
-                          ) : (
-                            <>
-                              <button className="icon-btn" onClick={() => { setEditingId(item.lgdCode); setEditName(item.name); }}><Edit2 size={16}/></button>
-                              <button className="icon-btn danger" onClick={() => handleDelete(item.lgdCode)}><Trash2 size={16}/></button>
-                            </>
+                          {userRole === 'ADMIN' && (
+                            editingId === item.lgdCode ? (
+                              <>
+                                <button className="icon-btn success" onClick={() => handleUpdate(item.lgdCode, editName)}><Save size={16}/></button>
+                                <button className="icon-btn" onClick={() => setEditingId(null)}><X size={16}/></button>
+                              </>
+                            ) : (
+                              <>
+                                <button className="icon-btn" onClick={() => { setEditingId(item.lgdCode); setEditName(item.name); }}><Edit2 size={16}/></button>
+                                <button className="icon-btn danger" onClick={() => handleDelete(item.lgdCode)}><Trash2 size={16}/></button>
+                              </>
+                            )
                           )}
                         </div>
                       </div>

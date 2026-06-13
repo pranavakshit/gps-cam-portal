@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import coil.compose.AsyncImage
 import com.pranavakshit.gpscamportal.data.local.AppDatabase
 import com.pranavakshit.gpscamportal.data.local.PhotoEntity
@@ -145,14 +147,34 @@ fun GalleryScreen(
                 items(pendingPhotos) { photo ->
                     Card {
                         Column {
-                            AsyncImage(
-                                model = photo.imageUri,
-                                contentDescription = "Captured photo",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(1f),
-                                contentScale = ContentScale.Crop
-                            )
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                AsyncImage(
+                                    model = photo.imageUri,
+                                    contentDescription = "Captured photo",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(1f),
+                                    contentScale = ContentScale.Crop
+                                )
+                                IconButton(
+                                    onClick = {
+                                        coroutineScope.launch(Dispatchers.IO) {
+                                            val file = File(photo.imageUri)
+                                            if (file.exists()) {
+                                                file.delete()
+                                            }
+                                            dao.deletePhoto(photo.id)
+                                        }
+                                    },
+                                    modifier = Modifier.align(Alignment.TopEnd)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete Photo",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
                             Text(
                                 text = photo.locationName,
                                 style = MaterialTheme.typography.bodyMedium,
