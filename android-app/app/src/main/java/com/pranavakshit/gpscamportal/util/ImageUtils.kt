@@ -19,18 +19,41 @@ object ImageUtils {
         timestamp: Long
     ): Boolean {
         return try {
+            // 1. Scale down the image if it's too large (e.g. max 1920px) to save disk/bandwidth
+            val maxDimension = 1920
+            val scale = if (originalBitmap.width > maxDimension || originalBitmap.height > maxDimension) {
+                Math.min(
+                    maxDimension.toFloat() / originalBitmap.width,
+                    maxDimension.toFloat() / originalBitmap.height
+                )
+            } else {
+                1f
+            }
+
+            val scaledBitmap = if (scale < 1f) {
+                Bitmap.createScaledBitmap(
+                    originalBitmap,
+                    (originalBitmap.width * scale).toInt(),
+                    (originalBitmap.height * scale).toInt(),
+                    true
+                )
+            } else {
+                originalBitmap
+            }
+
+            // 2. Draw watermark on the scaled image
             val resultBitmap = Bitmap.createBitmap(
-                originalBitmap.width,
-                originalBitmap.height,
-                originalBitmap.config ?: Bitmap.Config.ARGB_8888
+                scaledBitmap.width,
+                scaledBitmap.height,
+                scaledBitmap.config ?: Bitmap.Config.ARGB_8888
             )
 
             val canvas = Canvas(resultBitmap)
-            canvas.drawBitmap(originalBitmap, 0f, 0f, null)
+            canvas.drawBitmap(scaledBitmap, 0f, 0f, null)
 
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.WHITE
-                textSize = (originalBitmap.height * 0.03f).coerceAtLeast(30f) // Dynamic text size
+                textSize = (scaledBitmap.height * 0.03f).coerceAtLeast(30f) // Dynamic text size
                 setShadowLayer(5f, 2f, 2f, Color.BLACK)
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             }
@@ -38,8 +61,8 @@ object ImageUtils {
             val dateFormat = SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.getDefault())
             val dateString = dateFormat.format(Date(timestamp))
 
-            val margin = originalBitmap.width * 0.05f
-            var startY = originalBitmap.height - margin
+            val margin = scaledBitmap.width * 0.05f
+            var startY = scaledBitmap.height - margin
 
             // Draw text from bottom to top
             val lines = listOf(
@@ -53,11 +76,15 @@ object ImageUtils {
                 startY -= (paint.textSize * 1.5f)
             }
 
+            // 3. Compress using lower JPEG quality (70 instead of 90)
             FileOutputStream(outputFile).use { out ->
-                resultBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                resultBitmap.compress(Bitmap.CompressFormat.JPEG, 70, out)
             }
             
             resultBitmap.recycle()
+            if (scale < 1f) {
+                scaledBitmap.recycle()
+            }
             originalBitmap.recycle()
             true
         } catch (e: Exception) {
