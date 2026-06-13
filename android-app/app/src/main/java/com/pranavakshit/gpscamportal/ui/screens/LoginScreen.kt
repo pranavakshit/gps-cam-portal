@@ -114,7 +114,9 @@ fun LoginScreen(
                     scope.launch {
                         try {
                             val apiService = ApiService.create()
-                            val response = apiService.login(LoginRequest(username, password))
+                            val trimmedUsername = username.trim()
+                            val trimmedPassword = password.trim()
+                            val response = apiService.login(LoginRequest(trimmedUsername, trimmedPassword))
                             
                             if (response.isSuccessful && response.body() != null) {
                                 val body = response.body()!!
