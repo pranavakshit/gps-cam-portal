@@ -382,3 +382,36 @@
   padding: 2px 6px;
   border-radius: 12px;
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .locations-layout {
+    flex-direction: column;
+    overflow: visible;
+  }
+  
+  .upload-sidebar {
+    width: 100%;
+  }
+  
+  .locations-manager {
+    height: auto;
+    padding: 16px 0;
+  }
+  
+  .explorer-toolbar {
+    padding: 12px;
+  }
+  
+  .list-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .item-actions {
+    opacity: 1; /* Always show actions on mobile since hover doesn't exist */
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
