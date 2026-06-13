@@ -2,7 +2,7 @@ package com.pranavakshit.gpscamportal.data.remote
 
 data class LoginRequest(
     val username: String,
-    val passwordHash: String
+    val password: String
 )
 
 data class LoginResponse(
