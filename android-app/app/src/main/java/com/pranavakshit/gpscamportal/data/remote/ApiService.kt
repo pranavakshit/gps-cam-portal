@@ -44,8 +44,20 @@ interface ApiService {
         private const val BASE_URL = "https://api.pranavakshit.in/"
 
         fun create(): ApiService {
+            val okHttpClient = okhttp3.OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val original = chain.request()
+                    val request = original.newBuilder()
+                        // Disguise as Chrome Mobile to bypass Cloudflare Bot Protection
+                        .header("User-Agent", "Mozilla/5.0 (Linux; Android 13; SM-G991U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36")
+                        .build()
+                    chain.proceed(request)
+                }
+                .build()
+
             val retrofit = Retrofit.Builder()
                 .baseUrl(BASE_URL)
+                .client(okHttpClient)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
             
