@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Shield, Edit2, Trash2, Plus, Key } from 'lucide-react';
+import { User, Shield, Edit2, Trash2, Plus, Key, RefreshCw } from 'lucide-react';
 import '../pages/Dashboard.css';
 
 interface UserModel {
@@ -137,11 +137,16 @@ const UsersManager: React.FC = () => {
 
   return (
     <div className="users-manager animate-fade-in" style={{ padding: '24px' }}>
-      <div className="content-header" style={{ marginBottom: '24px' }}>
-        <h2 style={{ color: 'var(--text-color)' }}>User Management</h2>
-        <button className="btn btn-primary" onClick={openCreateModal}>
-          <Plus size={18} style={{ marginRight: '8px' }} /> Add User
-        </button>
+      <div className="content-header" style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2 style={{ color: 'var(--text-color)', margin: 0 }}>User Management</h2>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button className="btn btn-outline" onClick={fetchUsers} title="Refresh Users List">
+            <RefreshCw size={18} style={{ marginRight: '8px' }} /> Sync
+          </button>
+          <button className="btn btn-primary" onClick={openCreateModal}>
+            <Plus size={18} style={{ marginRight: '8px' }} /> Add User
+          </button>
+        </div>
       </div>
 
       {error && <div className="error-message" style={{ marginBottom: '16px' }}>{error}</div>}
