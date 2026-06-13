@@ -59,6 +59,11 @@ export const uploadPhoto = async (req: Request, res: Response): Promise<void> =>
       });
     }
 
+    if (user.role === 'VISITOR') {
+      res.status(403).json({ error: 'Visitor accounts are not permitted to upload photos' });
+      return;
+    }
+
     const userId = user.id;
 
     const createdPhotos = [];

@@ -174,6 +174,9 @@ const Dashboard: React.FC = () => {
   const renderActionButtons = (photo: Photo) => {
     const isOwner = photo.uploader === username;
     const isAdmin = userRole === 'ADMIN';
+    const isVisitor = userRole === 'VISITOR';
+
+    if (isVisitor) return null;
 
     if (activeTab === 'recycle-bin') {
       return (
@@ -253,12 +256,14 @@ const Dashboard: React.FC = () => {
           >
             Photo Gallery
           </button>
-          <button 
-            className={`tab-btn ${activeTab === 'recycle-bin' ? 'active' : ''}`}
-            onClick={() => setActiveTab('recycle-bin')}
-          >
-            Recycle Bin
-          </button>
+          {userRole !== 'VISITOR' && (
+            <button 
+              className={`tab-btn ${activeTab === 'recycle-bin' ? 'active' : ''}`}
+              onClick={() => setActiveTab('recycle-bin')}
+            >
+              Recycle Bin
+            </button>
+          )}
           <button 
             className={`tab-btn ${activeTab === 'locations' ? 'active' : ''}`}
             onClick={() => setActiveTab('locations')}
