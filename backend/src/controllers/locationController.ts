@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../db/prisma';
 import { processLgdZip } from '../services/lgdImportService';
+import fs from 'fs';
 
 export const importLgdData = async (req: Request, res: Response): Promise<void> => {
   res.setHeader('Content-Type', 'text/event-stream');
@@ -19,11 +20,16 @@ export const importLgdData = async (req: Request, res: Response): Promise<void> 
       cancelled = true;
     });
 
-    await processLgdZip(req.file.buffer, (progress, message) => {
+    await processLgdZip(fs.readFileSync(req.file.path), (progress, message) => {
       if (!res.writableEnded) {
         res.write(`data: ${JSON.stringify({ progress, message })}\n\n`);
       }
     }, () => cancelled);
+    
+    // Clean up temporary file
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
     
     if (!res.writableEnded) {
       if (cancelled) {

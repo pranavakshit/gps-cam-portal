@@ -17,7 +17,24 @@ import {
 import { authenticateJWT } from '../middleware/authMiddleware';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage() });
+import fs from 'fs';
+import path from 'path';
+
+// Ensure temp directory exists
+const tempDir = path.join(__dirname, '../../uploads/temp');
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, tempDir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, 'lgd-upload-' + Date.now() + '.zip');
+  }
+});
+const upload = multer({ storage: storage });
 
 // Public endpoints for Android App
 router.get('/states', getStates);
