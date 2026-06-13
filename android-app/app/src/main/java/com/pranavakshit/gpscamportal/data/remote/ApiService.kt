@@ -41,7 +41,7 @@ interface ApiService {
     ): Response<Unit>
 
     companion object {
-        private const val BASE_URL = "http://192.168.31.77:5000/"
+        private const val BASE_URL = "https://api.pranavakshit.in/"
 
         fun create(): ApiService {
             val retrofit = Retrofit.Builder()
