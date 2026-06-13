@@ -5,6 +5,8 @@ import path from 'path';
 import authRoutes from './routes/authRoutes';
 import locationRoutes from './routes/locationRoutes';
 import photoRoutes from './routes/photoRoutes';
+import userRoutes from './routes/userRoutes';
+import dockerRoutes from './routes/dockerRoutes';
 
 dotenv.config();
 
@@ -19,6 +21,8 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/photos', photoRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/docker', dockerRoutes);
 
 app.get('/', (req, res) => {
   res.send('GPS Cam Portal Backend API is running!');
