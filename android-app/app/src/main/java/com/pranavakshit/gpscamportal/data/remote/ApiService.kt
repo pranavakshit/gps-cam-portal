@@ -59,8 +59,23 @@ interface ApiService {
     @POST("/api/photos/{id}/approve-delete")
     suspend fun approveDeletePhoto(@retrofit2.http.Path("id") id: Int): Response<Unit>
 
+    @POST("/api/photos/{id}/reject-delete")
+    suspend fun rejectDeletePhoto(@retrofit2.http.Path("id") id: Int): Response<Unit>
+
+    @POST("/api/photos/{id}/abort-delete")
+    suspend fun abortDeletePhoto(@retrofit2.http.Path("id") id: Int): Response<Unit>
+
+    @POST("/api/photos/{id}/complete-delete")
+    suspend fun completeDeletePhoto(@retrofit2.http.Path("id") id: Int): Response<Unit>
+
     @DELETE("/api/photos/{id}")
     suspend fun deletePhoto(@retrofit2.http.Path("id") id: Int): Response<Unit>
+
+    @POST("/api/photos/{id}/restore")
+    suspend fun restorePhoto(@retrofit2.http.Path("id") id: Int): Response<Unit>
+
+    @DELETE("/api/photos/{id}/hard")
+    suspend fun hardDeletePhoto(@retrofit2.http.Path("id") id: Int): Response<Unit>
 
     @GET("/api/locations/states/{id}/districts")
     suspend fun getDistricts(@retrofit2.http.Path("id") stateId: Int): Response<List<DistrictDto>>

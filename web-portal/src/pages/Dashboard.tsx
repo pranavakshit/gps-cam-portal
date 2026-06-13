@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, MapPin, Calendar, Download, Search, LogOut, Trash2, AlertTriangle, Check, RefreshCw } from 'lucide-react';
+import { Camera, MapPin, Calendar, Download, Search, LogOut, Trash2, AlertTriangle, Check, RefreshCw, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import LocationsManager from '../components/LocationsManager';
 import UsersManager from '../components/UsersManager';
@@ -148,21 +148,57 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // 3. Finalize Deletion (Actually Soft Deletes)
-  const handleFinalizeDeletion = async (id: number) => {
+  // 3. Finalize Deletion (Actually Soft Deletes) - ONLY Admin in Recycle Bin, or Users completing approved deletions.
+  const handleCompleteDeletion = async (id: number) => {
     if (!window.confirm("Are you sure you want to finalize deletion? This will move the photo to the Recycle Bin.")) return;
     
     try {
       const token = localStorage.getItem('token');
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${API_URL}/api/photos/${id}`, {
-        method: 'DELETE',
+      const response = await fetch(`${API_URL}/api/photos/${id}/complete-delete`, {
+        method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
       if (response.ok) {
         setPhotos(photos.filter(p => p.id !== id));
       } else {
+        const errorData = await response.json().catch(() => null);
+        alert(`Failed: ${errorData?.error || response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleRejectDeletion = async (id: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${API_URL}/api/photos/${id}/reject-delete`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) fetchPhotos();
+      else {
+        const errorData = await response.json().catch(() => null);
+        alert(`Failed: ${errorData?.error || response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleAbortDeletion = async (id: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${API_URL}/api/photos/${id}/abort-delete`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) fetchPhotos();
+      else {
         const errorData = await response.json().catch(() => null);
         alert(`Failed: ${errorData?.error || response.statusText}`);
       }
@@ -244,8 +280,8 @@ const Dashboard: React.FC = () => {
             <button className="btn btn-success icon-btn" onClick={() => handleApproveDeletion(photo.id)} title="Approve User's Deletion Request">
               <Check size={20} />
             </button>
-            <button className="btn btn-danger icon-btn" onClick={() => handleFinalizeDeletion(photo.id)} title="Force Delete" style={{ marginLeft: '8px' }}>
-              <Trash2 size={20} />
+            <button className="btn btn-danger icon-btn" onClick={() => handleRejectDeletion(photo.id)} title="Reject Request" style={{ marginLeft: '8px' }}>
+              <X size={20} />
             </button>
           </>
         );
@@ -255,51 +291,49 @@ const Dashboard: React.FC = () => {
     }
 
     if (photo.deletionStatus === 'ADMIN_APPROVED') {
-      if (isOwner || isAdmin) {
+      if (isOwner) {
         return (
-          <button className="btn btn-danger icon-btn" onClick={() => handleFinalizeDeletion(photo.id)} title="Finalize Deletion">
-            <Trash2 size={20} />
-          </button>
+          <>
+            <button className="btn btn-danger icon-btn" onClick={() => handleCompleteDeletion(photo.id)} title="Complete Deletion">
+              <Trash2 size={20} />
+            </button>
+            <button className="btn btn-secondary icon-btn" onClick={() => handleAbortDeletion(photo.id)} title="Abort Deletion" style={{ marginLeft: '8px' }}>
+              <X size={20} />
+            </button>
+          </>
         );
+      } else if (isAdmin) {
+        return <span className="status-badge pending">Waiting for User to Complete</span>;
       }
     }
 
     if (photo.deletionStatus === 'ADMIN_REQUESTED') {
       if (isOwner) {
         return (
-          <button className="btn btn-danger icon-btn" onClick={() => handleFinalizeDeletion(photo.id)} title="Approve Admin's Deletion Request">
-            <Check size={20} />
-          </button>
-        );
-      } else if (isAdmin) {
-        return (
           <>
-            <span className="status-badge pending">Waiting for User Approval</span>
-            <button className="btn btn-danger icon-btn" onClick={() => handleFinalizeDeletion(photo.id)} title="Force Delete" style={{ marginLeft: '8px' }}>
-              <Trash2 size={20} />
+            <button className="btn btn-danger icon-btn" onClick={() => handleApproveDeletion(photo.id)} title="Accept Admin's Deletion Request">
+              <Check size={20} />
+            </button>
+            <button className="btn btn-secondary icon-btn" onClick={() => handleRejectDeletion(photo.id)} title="Reject Request" style={{ marginLeft: '8px' }}>
+              <X size={20} />
             </button>
           </>
         );
+      } else if (isAdmin) {
+        return <span className="status-badge pending">Waiting for User Approval</span>;
       }
     }
 
     // Default 'NONE' state
     if (isOwner || isAdmin) {
       return (
-        <>
-          <button 
-            className="btn btn-warning icon-btn"
-            onClick={() => handleRequestDeletion(photo.id)}
-            title={isAdmin ? "Request User to Delete" : "Request Admin to Delete"}
-          >
-            <AlertTriangle size={20} />
-          </button>
-          {isAdmin && (
-            <button className="btn btn-danger icon-btn" onClick={() => handleFinalizeDeletion(photo.id)} title="Force Delete" style={{ marginLeft: '8px' }}>
-              <Trash2 size={20} />
-            </button>
-          )}
-        </>
+        <button 
+          className="btn btn-warning icon-btn"
+          onClick={() => handleRequestDeletion(photo.id)}
+          title={isAdmin ? "Request User to Delete" : "Request Admin to Delete"}
+        >
+          <AlertTriangle size={20} />
+        </button>
       );
     }
 

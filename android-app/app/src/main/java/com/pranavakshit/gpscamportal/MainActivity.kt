@@ -29,38 +29,68 @@ enum class Screen {
 
 @Composable
 fun GPSCamPortalApp() {
-    var currentScreen by remember { mutableStateOf(Screen.LOGIN) }
+    val backStack = remember { androidx.compose.runtime.mutableStateListOf(Screen.LOGIN) }
+    val currentScreen = backStack.lastOrNull() ?: Screen.LOGIN
     
     // Store selected location temporarily before passing to Camera
     var selectedState by remember { mutableStateOf("") }
     var selectedDistrict by remember { mutableStateOf("") }
     var selectedArea by remember { mutableStateOf("") }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var backPressedTime by remember { mutableStateOf(0L) }
+
+    fun navigateTo(screen: Screen) {
+        if (backStack.lastOrNull() != screen) {
+            backStack.add(screen)
+        }
+    }
+
+    fun navigateBack() {
+        if (backStack.size > 1) {
+            backStack.removeLast()
+        } else {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - backPressedTime < 2000) {
+                (context as? android.app.Activity)?.finish()
+            } else {
+                android.widget.Toast.makeText(context, "Press back again to exit", android.widget.Toast.LENGTH_SHORT).show()
+                backPressedTime = currentTime
+            }
+        }
+    }
+
+    androidx.activity.compose.BackHandler {
+        navigateBack()
+    }
+
     when (currentScreen) {
         Screen.LOGIN -> {
             LoginScreen(
                 onLoginSuccess = {
-                    currentScreen = Screen.DASHBOARD
+                    backStack.clear()
+                    backStack.add(Screen.DASHBOARD)
                 }
             )
         }
         Screen.DASHBOARD -> {
             com.pranavakshit.gpscamportal.ui.screens.DashboardScreen(
                 onNavigateToCamera = {
-                    currentScreen = Screen.LOCATION
+                    navigateTo(Screen.LOCATION)
                 },
                 onNavigateToOfflineGallery = {
-                    currentScreen = Screen.OFFLINE_GALLERY
+                    navigateTo(Screen.OFFLINE_GALLERY)
                 },
                 onLogout = {
-                    currentScreen = Screen.LOGIN
+                    backStack.clear()
+                    backStack.add(Screen.LOGIN)
                 }
             )
         }
         Screen.OFFLINE_GALLERY -> {
             com.pranavakshit.gpscamportal.ui.screens.GalleryScreen(
                 onNavigateBack = {
-                    currentScreen = Screen.DASHBOARD 
+                    navigateBack()
                 }
             )
         }
@@ -70,7 +100,7 @@ fun GPSCamPortalApp() {
                     selectedState = state
                     selectedDistrict = district
                     selectedArea = area
-                    currentScreen = Screen.CAMERA
+                    navigateTo(Screen.CAMERA)
                 }
             )
         }
@@ -80,10 +110,14 @@ fun GPSCamPortalApp() {
                 district = selectedDistrict,
                 area = selectedArea,
                 onPhotoSaved = {
-                    currentScreen = Screen.OFFLINE_GALLERY
+                    if (backStack.size > 1) backStack.removeLast() // pop location
+                    if (backStack.size > 1) backStack.removeLast() // pop camera
+                    navigateTo(Screen.OFFLINE_GALLERY)
                 },
                 onNavigateToGallery = {
-                    currentScreen = Screen.OFFLINE_GALLERY
+                    if (backStack.size > 1) backStack.removeLast() // pop location
+                    if (backStack.size > 1) backStack.removeLast() // pop camera
+                    navigateTo(Screen.OFFLINE_GALLERY)
                 }
             )
         }

@@ -146,6 +146,7 @@ model Photo {
 
   deletionStatus  String   @default("NONE") @map("deletion_status")
   deletionReason  String?  @map("deletion_reason")
+  deletionRequestTime DateTime? @map("deletion_request_time")
 
   user User @relation(fields: [userId], references: [id])
 }

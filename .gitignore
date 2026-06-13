@@ -47,3 +47,5 @@ web-portal/build/
 # Theme(s)
 theme/
 release/
+
+keys/

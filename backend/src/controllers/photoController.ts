@@ -120,9 +120,27 @@ export const getPhotos = async (req: AuthRequest, res: Response): Promise<void> 
       },
       orderBy: { timestamp: 'desc' }
     });
-    
-    // Transform the data
+    const now = new Date().getTime();
+    const oneHourMs = 60 * 60 * 1000;
+    const expiredPhotoIds: number[] = [];
+
+    // Transform the data and check for expiration
     const transformed = photos.map(p => {
+        let currentStatus = p.deletionStatus;
+        let currentReason = p.deletionReason;
+        let currentTime = p.deletionRequestTime;
+
+        if (p.deletionRequestTime && p.deletionStatus !== 'NONE' && p.deletionStatus !== 'DELETED_SOFT') {
+            const reqTime = new Date(p.deletionRequestTime).getTime();
+            if (now - reqTime > oneHourMs) {
+                // Expired
+                currentStatus = 'NONE';
+                currentReason = null;
+                currentTime = null;
+                expiredPhotoIds.push(p.id);
+            }
+        }
+
         // Construct a string to describe the location based on provided codes
         const locParts = [];
         if (p.villageCode) locParts.push(`Village ${p.villageCode}`);
@@ -144,10 +162,18 @@ export const getPhotos = async (req: AuthRequest, res: Response): Promise<void> 
           timestamp: p.timestamp,
           imageUrl: p.imageUrl,
           uploader: p.user.username,
-          deletionStatus: p.deletionStatus,
-          deletionReason: p.deletionReason
+          deletionStatus: currentStatus,
+          deletionReason: currentReason
         };
     });
+
+    // Asynchronously update expired photos in the database
+    if (expiredPhotoIds.length > 0) {
+        prisma.photo.updateMany({
+            where: { id: { in: expiredPhotoIds } },
+            data: { deletionStatus: 'NONE', deletionReason: null, deletionRequestTime: null }
+        }).catch(err => console.error('Error auto-expiring photos:', err));
+    }
 
     res.status(200).json(transformed);
   } catch (error) {
@@ -181,7 +207,8 @@ export const requestDeletePhoto = async (req: AuthRequest, res: Response): Promi
       where: { id: Number(id) },
       data: {
         deletionStatus: newStatus,
-        deletionReason: reason || null
+        deletionReason: reason || null,
+        deletionRequestTime: new Date()
       }
     });
 
@@ -196,67 +223,150 @@ export const approveDeletePhoto = async (req: AuthRequest, res: Response): Promi
   try {
     const { id } = req.params;
     
-    if (req.user?.role !== 'ADMIN') {
-      res.status(403).json({ error: 'Only admins can approve deletion requests' });
-      return;
-    }
-
     const photo = await prisma.photo.findUnique({ where: { id: Number(id) } });
     if (!photo) {
       res.status(404).json({ error: 'Photo not found' });
       return;
     }
 
-    if (photo.deletionStatus !== 'USER_REQUESTED') {
-      res.status(400).json({ error: 'Photo is not in USER_REQUESTED state' });
-      return;
+    const isAdmin = req.user?.role === 'ADMIN';
+    const isOwner = req.user?.id === photo.userId;
+
+    if (isAdmin) {
+      if (photo.deletionStatus !== 'USER_REQUESTED') {
+        res.status(400).json({ error: 'Photo is not in USER_REQUESTED state' });
+        return;
+      }
+      
+      const updated = await prisma.photo.update({
+        where: { id: Number(id) },
+        data: { 
+            deletionStatus: 'ADMIN_APPROVED',
+            deletionRequestTime: new Date() // Reset expiration timer to 1 hour
+        }
+      });
+      res.status(200).json({ message: 'Deletion approved successfully', photo: updated });
+    } else if (isOwner) {
+      if (photo.deletionStatus !== 'ADMIN_REQUESTED') {
+        res.status(400).json({ error: 'Photo is not in ADMIN_REQUESTED state' });
+        return;
+      }
+      
+      const updated = await prisma.photo.update({
+        where: { id: Number(id) },
+        data: { 
+            deletionStatus: 'DELETED_SOFT',
+            deletionRequestTime: null
+        }
+      });
+      res.status(200).json({ message: 'Deletion accepted and photo moved to recycle bin', photo: updated });
+    } else {
+      res.status(403).json({ error: 'Unauthorized to approve deletion for this photo' });
     }
-
-    const updated = await prisma.photo.update({
-      where: { id: Number(id) },
-      data: { deletionStatus: 'ADMIN_APPROVED' }
-    });
-
-    res.status(200).json({ message: 'Deletion approved successfully', photo: updated });
   } catch (error) {
     console.error('Approve delete error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-export const deletePhoto = async (req: AuthRequest, res: Response): Promise<void> => {
+export const rejectDeletePhoto = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     
-    const photo = await prisma.photo.findUnique({
-      where: { id: Number(id) }
-    });
-    
+    const photo = await prisma.photo.findUnique({ where: { id: Number(id) } });
     if (!photo) {
       res.status(404).json({ error: 'Photo not found' });
       return;
     }
-    
+
     const isAdmin = req.user?.role === 'ADMIN';
     const isOwner = req.user?.id === photo.userId;
 
-    if (!isAdmin && !isOwner) {
-      res.status(403).json({ error: 'Unauthorized to delete this photo' });
+    if ((isAdmin && photo.deletionStatus === 'USER_REQUESTED') || 
+        (isOwner && photo.deletionStatus === 'ADMIN_REQUESTED')) {
+        
+        const updated = await prisma.photo.update({
+          where: { id: Number(id) },
+          data: { 
+              deletionStatus: 'NONE',
+              deletionReason: null,
+              deletionRequestTime: null
+          }
+        });
+        res.status(200).json({ message: 'Deletion request rejected', photo: updated });
+    } else {
+        res.status(403).json({ error: 'Unauthorized or invalid state to reject deletion for this photo' });
+    }
+  } catch (error) {
+    console.error('Reject delete error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const completeDeletePhoto = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    const photo = await prisma.photo.findUnique({ where: { id: Number(id) } });
+    if (!photo) {
+      res.status(404).json({ error: 'Photo not found' });
       return;
     }
+
+    const isOwner = req.user?.id === photo.userId;
+
+    if (isOwner && photo.deletionStatus === 'ADMIN_APPROVED') {
+        const updated = await prisma.photo.update({
+          where: { id: Number(id) },
+          data: { 
+              deletionStatus: 'DELETED_SOFT',
+              deletionRequestTime: null
+          }
+        });
+        res.status(200).json({ message: 'Deletion completed', photo: updated });
+    } else {
+        res.status(403).json({ error: 'Unauthorized or invalid state to complete deletion' });
+    }
+  } catch (error) {
+    console.error('Complete delete error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const abortDeletePhoto = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
     
-    if (!isAdmin && photo.deletionStatus !== 'ADMIN_APPROVED' && photo.deletionStatus !== 'ADMIN_REQUESTED') {
-      res.status(400).json({ error: 'Deletion must be approved by an admin first' });
+    const photo = await prisma.photo.findUnique({ where: { id: Number(id) } });
+    if (!photo) {
+      res.status(404).json({ error: 'Photo not found' });
       return;
     }
-    
-    // Soft Delete
-    await prisma.photo.update({
-      where: { id: Number(id) },
-      data: { deletionStatus: 'DELETED_SOFT' }
-    });
-    
-    res.status(200).json({ message: 'Photo softly deleted successfully' });
+
+    const isOwner = req.user?.id === photo.userId;
+
+    if (isOwner && photo.deletionStatus === 'ADMIN_APPROVED') {
+        const updated = await prisma.photo.update({
+          where: { id: Number(id) },
+          data: { 
+              deletionStatus: 'NONE',
+              deletionReason: null,
+              deletionRequestTime: null
+          }
+        });
+        res.status(200).json({ message: 'Deletion aborted', photo: updated });
+    } else {
+        res.status(403).json({ error: 'Unauthorized or invalid state to abort deletion' });
+    }
+  } catch (error) {
+    console.error('Abort delete error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const deletePhoto = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    res.status(400).json({ error: 'Direct force delete is no longer permitted. Please use the two-party request flow.' });
   } catch (error) {
     console.error('Delete photo error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -288,7 +398,7 @@ export const restorePhoto = async (req: AuthRequest, res: Response): Promise<voi
     
     await prisma.photo.update({
       where: { id: Number(id) },
-      data: { deletionStatus: 'NONE', deletionReason: null }
+      data: { deletionStatus: 'NONE', deletionReason: null, deletionRequestTime: null }
     });
     
     res.status(200).json({ message: 'Photo restored successfully' });

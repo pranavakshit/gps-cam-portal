@@ -26,6 +26,9 @@ public interface PhotoDao {
     @Query("UPDATE photos SET isDeleted = 1 WHERE id = :id")
     void softDeletePhoto(int id);
 
+    @Query("UPDATE photos SET isDeleted = 0 WHERE id = :id")
+    void restorePhoto(int id);
+
     @Query("DELETE FROM photos WHERE id = :id")
     void deletePhoto(int id);
 }

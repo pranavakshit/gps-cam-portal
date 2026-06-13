@@ -16,6 +16,10 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -42,16 +46,13 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import com.pranavakshit.gpscamportal.util.UserPreferences
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun GalleryScreen(
     onNavigateBack: () -> Unit
 ) {
-    BackHandler {
-        onNavigateBack()
-    }
-
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val dao = remember { AppDatabase.getDatabase(context).photoDao() }
@@ -65,6 +66,10 @@ fun GalleryScreen(
     var isLoadingCloud by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(0) } // 0 = Offline, 1 = Cloud, 2 = Recycle Bin
 
+    val userPreferences = remember { UserPreferences(context) }
+    val role = userPreferences.getRole() ?: "user"
+    val isAdmin = role.equals("ADMIN", ignoreCase = true)
+
     // Multi-Select State
     var isMultiSelectMode by remember { mutableStateOf(false) }
     val selectedOfflineIds = remember { mutableStateListOf<Int>() }
@@ -74,6 +79,21 @@ fun GalleryScreen(
     var viewingOfflinePhoto by remember { mutableStateOf<PhotoEntity?>(null) }
     var viewingCloudPhoto by remember { mutableStateOf<PhotoDto?>(null) }
     var showDetailsDialog by remember { mutableStateOf(false) }
+    
+    // Dialog states
+    var showReasonDialog by remember { mutableStateOf(false) }
+    var deleteReason by remember { mutableStateOf("") }
+    var showConfirmDialog by remember { mutableStateOf<Pair<String, Boolean>?>(null) } // Pair(Action, isCloud) where Action = "delete" | "hard_delete"
+
+    BackHandler(enabled = true) {
+        if (isMultiSelectMode) {
+            isMultiSelectMode = false
+            selectedOfflineIds.clear()
+            selectedCloudIds.clear()
+        } else {
+            onNavigateBack()
+        }
+    }
 
     val fetchCloudPhotos = {
         coroutineScope.launch {
@@ -146,8 +166,24 @@ fun GalleryScreen(
                                 // Request delete for selected cloud
                                 val api = ApiService.create(context)
                                 selectedCloudIds.forEach { id ->
-                                    val req = DeletionRequest(reason = "Bulk Deletion Request")
-                                    api.requestDeletePhoto(id, req)
+                                    val photo = cloudPhotos.find { it.id == id } ?: recycleBinPhotos.find { it.id == id }
+                                    if (photo != null) {
+                                        if (isAdmin) {
+                                            if (photo.deletionStatus == "NONE") {
+                                                api.requestDeletePhoto(id, DeletionRequest(reason = "Bulk Deletion Request (Admin)"))
+                                            } else if (photo.deletionStatus == "USER_REQUESTED") {
+                                                api.approveDeletePhoto(id)
+                                            }
+                                        } else {
+                                            if (photo.deletionStatus == "ADMIN_APPROVED") {
+                                                api.completeDeletePhoto(id)
+                                            } else if (photo.deletionStatus == "ADMIN_REQUESTED") {
+                                                api.approveDeletePhoto(id)
+                                            } else if (photo.deletionStatus == "NONE") {
+                                                api.requestDeletePhoto(id, DeletionRequest(reason = "Bulk Deletion Request (User)"))
+                                            }
+                                        }
+                                    }
                                 }
                                 selectedCloudIds.clear()
                                 isMultiSelectMode = false
@@ -445,61 +481,143 @@ fun GalleryScreen(
                     }
                     
                     if (selectedTab != 2) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { 
-                            if (isOffline) {
-                                coroutineScope.launch {
-                                    dao.softDeletePhoto(viewingOfflinePhoto!!.id)
-                                    viewingOfflinePhoto = null
+                        if (isOffline) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { 
+                                showConfirmDialog = Pair("delete", false)
+                            }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+                                Text("Delete", color = Color.Red, style = MaterialTheme.typography.labelSmall)
+                            }
+                        } else {
+                            val cloudData = viewingCloudPhoto!!
+                            if (isAdmin) {
+                                if (cloudData.deletionStatus == "USER_REQUESTED") {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { 
+                                        coroutineScope.launch {
+                                            val api = ApiService.create(context)
+                                            api.approveDeletePhoto(cloudData.id)
+                                            fetchCloudPhotos()
+                                            viewingCloudPhoto = null
+                                        }
+                                    }.padding(horizontal = 8.dp)) {
+                                        Icon(Icons.Default.Check, contentDescription = "Approve", tint = Color.Green)
+                                        Text("Approve", color = Color.Green, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { 
+                                        coroutineScope.launch {
+                                            val api = ApiService.create(context)
+                                            api.rejectDeletePhoto(cloudData.id)
+                                            fetchCloudPhotos()
+                                            viewingCloudPhoto = null
+                                        }
+                                    }.padding(horizontal = 8.dp)) {
+                                        Icon(Icons.Default.Close, contentDescription = "Reject", tint = Color.Red)
+                                        Text("Reject", color = Color.Red, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                } else if (cloudData.deletionStatus == "NONE") {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { 
+                                        showReasonDialog = true
+                                    }.padding(horizontal = 8.dp)) {
+                                        Icon(Icons.Default.Warning, contentDescription = "Request", tint = Color.Yellow)
+                                        Text("Req. Delete", color = Color.Yellow, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                } else if (cloudData.deletionStatus == "ADMIN_REQUESTED") {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp)) {
+                                        Icon(Icons.Default.Info, contentDescription = "Pending User", tint = Color.Gray)
+                                        Text("Pending User", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                } else if (cloudData.deletionStatus == "ADMIN_APPROVED") {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp)) {
+                                        Icon(Icons.Default.Info, contentDescription = "Waiting Completion", tint = Color.Gray)
+                                        Text("Waiting Completion", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                                    }
                                 }
                             } else {
-                                val cloudData = viewingCloudPhoto!!
-                                coroutineScope.launch {
-                                    val api = ApiService.create(context)
-                                    
-                                    if (cloudData.deletionStatus == "ADMIN_APPROVED" || cloudData.deletionStatus == "ADMIN_REQUESTED") {
-                                        // Finalize delete
-                                        val res = api.deletePhoto(cloudData.id)
-                                        if (res.isSuccessful) {
-                                            Toast.makeText(context, "Moved to Recycle Bin", Toast.LENGTH_SHORT).show()
+                                if (cloudData.deletionStatus == "ADMIN_REQUESTED") {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { 
+                                        coroutineScope.launch {
+                                            val api = ApiService.create(context)
+                                            api.approveDeletePhoto(cloudData.id)
                                             fetchCloudPhotos()
                                             viewingCloudPhoto = null
                                         }
-                                    } else if (cloudData.deletionStatus == "NONE") {
-                                        // Request delete
-                                        val req = DeletionRequest(reason = "Requested via App")
-                                        val res = api.requestDeletePhoto(cloudData.id, req)
-                                        if (res.isSuccessful) {
-                                            Toast.makeText(context, "Deletion requested. Pending Admin approval.", Toast.LENGTH_LONG).show()
+                                    }.padding(horizontal = 8.dp)) {
+                                        Icon(Icons.Default.Check, contentDescription = "Accept Request", tint = Color.Green)
+                                        Text("Accept", color = Color.Green, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { 
+                                        coroutineScope.launch {
+                                            val api = ApiService.create(context)
+                                            api.rejectDeletePhoto(cloudData.id)
                                             fetchCloudPhotos()
                                             viewingCloudPhoto = null
                                         }
-                                    } else {
-                                        Toast.makeText(context, "Already requested deletion.", Toast.LENGTH_SHORT).show()
+                                    }.padding(horizontal = 8.dp)) {
+                                        Icon(Icons.Default.Close, contentDescription = "Reject", tint = Color.Red)
+                                        Text("Reject", color = Color.Red, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                } else if (cloudData.deletionStatus == "ADMIN_APPROVED") {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { 
+                                        showConfirmDialog = Pair("complete", true)
+                                    }.padding(horizontal = 8.dp)) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Complete Delete", tint = Color.Red)
+                                        Text("Complete", color = Color.Red, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { 
+                                        coroutineScope.launch {
+                                            val api = ApiService.create(context)
+                                            api.abortDeletePhoto(cloudData.id)
+                                            fetchCloudPhotos()
+                                            viewingCloudPhoto = null
+                                        }
+                                    }.padding(horizontal = 8.dp)) {
+                                        Icon(Icons.Default.Close, contentDescription = "Abort", tint = Color.LightGray)
+                                        Text("Abort", color = Color.LightGray, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                } else if (cloudData.deletionStatus == "NONE") {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { 
+                                        showReasonDialog = true
+                                    }.padding(horizontal = 8.dp)) {
+                                        Icon(Icons.Default.Warning, contentDescription = "Request Delete", tint = Color.Yellow)
+                                        Text("Req. Delete", color = Color.Yellow, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                } else if (cloudData.deletionStatus == "USER_REQUESTED") {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 8.dp)) {
+                                        Icon(Icons.Default.Info, contentDescription = "Pending Admin", tint = Color.Gray)
+                                        Text("Pending Admin", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
                                     }
                                 }
                             }
-                        }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
-                            val actionText = if (isOffline) "Delete" else if (viewingCloudPhoto?.deletionStatus == "ADMIN_APPROVED" || viewingCloudPhoto?.deletionStatus == "ADMIN_REQUESTED") "Finalize Delete" else "Req. Delete"
-                            Text(actionText, color = Color.Red, style = MaterialTheme.typography.labelSmall)
                         }
                     } else {
-                        // Hard delete from recycle bin
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable {
                             if (isOffline) {
                                 coroutineScope.launch {
-                                    val file = File(viewingOfflinePhoto!!.imageUri)
-                                    if (file.exists()) file.delete()
-                                    dao.deletePhoto(viewingOfflinePhoto!!.id)
+                                    dao.restorePhoto(viewingOfflinePhoto!!.id)
                                     viewingOfflinePhoto = null
                                 }
                             } else {
-                                // hard delete cloud not implemented in api yet, so maybe just show a message
-                                Toast.makeText(context, "Cloud permanent delete not yet available", Toast.LENGTH_SHORT).show()
+                                coroutineScope.launch {
+                                    val api = ApiService.create(context)
+                                    val res = api.restorePhoto(viewingCloudPhoto!!.id)
+                                    if (res.isSuccessful) {
+                                        Toast.makeText(context, "Photo restored", Toast.LENGTH_SHORT).show()
+                                        fetchCloudPhotos()
+                                        viewingCloudPhoto = null
+                                    }
+                                }
                             }
-                        }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Permanently Delete", tint = Color.Red)
-                            Text("Perm. Delete", color = Color.Red, style = MaterialTheme.typography.labelSmall)
+                        }.padding(horizontal = 8.dp)) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Restore", tint = Color.Green)
+                            Text("Restore", color = Color.Green, style = MaterialTheme.typography.labelSmall)
+                        }
+                        if (isAdmin || isOffline) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable {
+                                showConfirmDialog = Pair("hard_delete", !isOffline)
+                            }.padding(horizontal = 8.dp)) {
+                                Icon(Icons.Default.Delete, contentDescription = "Permanently Delete", tint = Color.Red)
+                                Text("Perm. Delete", color = Color.Red, style = MaterialTheme.typography.labelSmall)
+                            }
                         }
                     }
                 }
@@ -530,6 +648,90 @@ fun GalleryScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = { showDetailsDialog = false }) { Text("Close") }
+                }
+            )
+        }
+        
+        if (showReasonDialog) {
+            AlertDialog(
+                onDismissRequest = { showReasonDialog = false },
+                title = { Text("Request Deletion") },
+                text = {
+                    OutlinedTextField(
+                        value = deleteReason,
+                        onValueChange = { deleteReason = it },
+                        label = { Text("Reason for deleting this photo") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        coroutineScope.launch {
+                            try {
+                                val api = ApiService.create(context)
+                                api.requestDeletePhoto(viewingCloudPhoto!!.id, DeletionRequest(reason = deleteReason))
+                                fetchCloudPhotos()
+                                viewingCloudPhoto = null
+                            } catch (e: Exception) { e.printStackTrace() }
+                        }
+                        showReasonDialog = false
+                        deleteReason = ""
+                    }) { Text("Submit") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showReasonDialog = false }) { Text("Cancel") }
+                }
+            )
+        }
+
+        if (showConfirmDialog != null) {
+            val action = showConfirmDialog!!.first
+            val isCloud = showConfirmDialog!!.second
+            AlertDialog(
+                onDismissRequest = { showConfirmDialog = null },
+                title = { Text(if (action == "hard_delete") "Permanently Delete" else "Confirm Deletion") },
+                text = { 
+                    Text(if (action == "hard_delete") "Are you sure you want to PERMANENTLY delete this photo? This cannot be undone." else "Are you sure you want to finalize deletion? This will move the photo to the Recycle Bin.") 
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        coroutineScope.launch {
+                            try {
+                                if (action == "hard_delete") {
+                                    if (isCloud) {
+                                        val api = ApiService.create(context)
+                                        api.hardDeletePhoto(viewingCloudPhoto!!.id)
+                                        fetchCloudPhotos()
+                                        viewingCloudPhoto = null
+                                    } else {
+                                        val file = File(viewingOfflinePhoto!!.imageUri)
+                                        if (file.exists()) file.delete()
+                                        dao.deletePhoto(viewingOfflinePhoto!!.id)
+                                        viewingOfflinePhoto = null
+                                    }
+                                } else {
+                                    if (isCloud) {
+                                        val api = ApiService.create(context)
+                                        if (action == "complete") {
+                                            api.completeDeletePhoto(viewingCloudPhoto!!.id)
+                                        } else {
+                                            api.deletePhoto(viewingCloudPhoto!!.id)
+                                        }
+                                        fetchCloudPhotos()
+                                        viewingCloudPhoto = null
+                                    } else {
+                                        dao.softDeletePhoto(viewingOfflinePhoto!!.id)
+                                        viewingOfflinePhoto = null
+                                    }
+                                }
+                            } catch (e: Exception) { e.printStackTrace() }
+                        }
+                        showConfirmDialog = null
+                    }) { Text("Confirm", color = Color.Red) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showConfirmDialog = null }) { Text("Cancel") }
                 }
             )
         }
