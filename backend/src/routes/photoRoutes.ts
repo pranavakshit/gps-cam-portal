@@ -20,7 +20,16 @@ router.post('/:id/request-delete', authenticateJWT, requestDeletePhoto);
 router.post('/:id/approve-delete', authenticateJWT, approveDeletePhoto);
 
 // DELETE /api/photos/:id
-// Protected endpoint to delete a photo
+// Protected endpoint to delete a photo (soft delete)
 router.delete('/:id', authenticateJWT, deletePhoto);
+
+// POST /api/photos/:id/restore
+// Protected endpoint to restore a soft-deleted photo
+import { restorePhoto, hardDeletePhoto } from '../controllers/photoController';
+router.post('/:id/restore', authenticateJWT, restorePhoto);
+
+// DELETE /api/photos/:id/hard
+// Protected endpoint to permanently delete a photo
+router.delete('/:id/hard', authenticateJWT, hardDeletePhoto);
 
 export default router;

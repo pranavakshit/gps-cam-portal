@@ -171,6 +171,50 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // 4. Restore from Recycle Bin
+  const handleRestorePhoto = async (id: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${API_URL}/api/photos/${id}/restore`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        setPhotos(photos.filter(p => p.id !== id));
+      } else {
+        const errorData = await response.json().catch(() => null);
+        alert(`Failed: ${errorData?.error || response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  // 5. Hard Delete (Admin only)
+  const handleHardDeletePhoto = async (id: number) => {
+    if (!window.confirm("Are you sure you want to PERMANENTLY delete this photo? This cannot be undone.")) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${API_URL}/api/photos/${id}/hard`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        setPhotos(photos.filter(p => p.id !== id));
+      } else {
+        const errorData = await response.json().catch(() => null);
+        alert(`Failed: ${errorData?.error || response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
   const renderActionButtons = (photo: Photo) => {
     const isOwner = photo.uploader === username;
     const isAdmin = userRole === 'ADMIN';
@@ -180,18 +224,30 @@ const Dashboard: React.FC = () => {
 
     if (activeTab === 'recycle-bin') {
       return (
-        <div className="status-badge" style={{backgroundColor: 'rgba(255, 50, 50, 0.8)', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold'}}>
-          Soft Deleted
-        </div>
+        <>
+          <button className="btn btn-success icon-btn" onClick={() => handleRestorePhoto(photo.id)} title="Restore Photo">
+            <RefreshCw size={20} />
+          </button>
+          {isAdmin && (
+            <button className="btn btn-danger icon-btn" onClick={() => handleHardDeletePhoto(photo.id)} title="Permanently Delete" style={{ marginLeft: '8px' }}>
+              <Trash2 size={20} />
+            </button>
+          )}
+        </>
       );
     }
 
     if (photo.deletionStatus === 'USER_REQUESTED') {
       if (isAdmin) {
         return (
-          <button className="btn btn-success icon-btn" onClick={() => handleApproveDeletion(photo.id)} title="Approve User's Deletion Request">
-            <Check size={20} />
-          </button>
+          <>
+            <button className="btn btn-success icon-btn" onClick={() => handleApproveDeletion(photo.id)} title="Approve User's Deletion Request">
+              <Check size={20} />
+            </button>
+            <button className="btn btn-danger icon-btn" onClick={() => handleFinalizeDeletion(photo.id)} title="Force Delete" style={{ marginLeft: '8px' }}>
+              <Trash2 size={20} />
+            </button>
+          </>
         );
       } else {
         return <span className="status-badge pending">Pending Admin Approval</span>;
@@ -216,21 +272,34 @@ const Dashboard: React.FC = () => {
           </button>
         );
       } else if (isAdmin) {
-        return <span className="status-badge pending">Waiting for User Approval</span>;
+        return (
+          <>
+            <span className="status-badge pending">Waiting for User Approval</span>
+            <button className="btn btn-danger icon-btn" onClick={() => handleFinalizeDeletion(photo.id)} title="Force Delete" style={{ marginLeft: '8px' }}>
+              <Trash2 size={20} />
+            </button>
+          </>
+        );
       }
     }
 
     // Default 'NONE' state
     if (isOwner || isAdmin) {
       return (
-        <button 
-          className="btn btn-warning icon-btn"
-          onClick={() => handleRequestDeletion(photo.id)}
-          title={isAdmin ? "Request User to Delete" : "Request Admin to Delete"}
-          style={{ marginLeft: '8px' }}
-        >
-          <AlertTriangle size={20} />
-        </button>
+        <>
+          <button 
+            className="btn btn-warning icon-btn"
+            onClick={() => handleRequestDeletion(photo.id)}
+            title={isAdmin ? "Request User to Delete" : "Request Admin to Delete"}
+          >
+            <AlertTriangle size={20} />
+          </button>
+          {isAdmin && (
+            <button className="btn btn-danger icon-btn" onClick={() => handleFinalizeDeletion(photo.id)} title="Force Delete" style={{ marginLeft: '8px' }}>
+              <Trash2 size={20} />
+            </button>
+          )}
+        </>
       );
     }
 

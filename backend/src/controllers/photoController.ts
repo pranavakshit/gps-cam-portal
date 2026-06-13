@@ -262,3 +262,75 @@ export const deletePhoto = async (req: AuthRequest, res: Response): Promise<void
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+export const restorePhoto = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    const photo = await prisma.photo.findUnique({ where: { id: Number(id) } });
+    if (!photo) {
+      res.status(404).json({ error: 'Photo not found' });
+      return;
+    }
+    
+    const isAdmin = req.user?.role === 'ADMIN';
+    const isOwner = req.user?.id === photo.userId;
+
+    if (!isAdmin && !isOwner) {
+      res.status(403).json({ error: 'Unauthorized to restore this photo' });
+      return;
+    }
+    
+    if (photo.deletionStatus !== 'DELETED_SOFT') {
+      res.status(400).json({ error: 'Photo is not in the Recycle Bin' });
+      return;
+    }
+    
+    await prisma.photo.update({
+      where: { id: Number(id) },
+      data: { deletionStatus: 'NONE', deletionReason: null }
+    });
+    
+    res.status(200).json({ message: 'Photo restored successfully' });
+  } catch (error) {
+    console.error('Restore photo error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const hardDeletePhoto = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    if (req.user?.role !== 'ADMIN') {
+      res.status(403).json({ error: 'Only admins can permanently delete photos' });
+      return;
+    }
+
+    const photo = await prisma.photo.findUnique({ where: { id: Number(id) } });
+    if (!photo) {
+      res.status(404).json({ error: 'Photo not found' });
+      return;
+    }
+    
+    if (photo.deletionStatus !== 'DELETED_SOFT') {
+      res.status(400).json({ error: 'Photo must be in the Recycle Bin to be permanently deleted' });
+      return;
+    }
+
+    // Delete the actual file from disk
+    const filePath = path.join(__dirname, '../../', photo.imageUrl);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    
+    await prisma.photo.delete({
+      where: { id: Number(id) }
+    });
+    
+    res.status(200).json({ message: 'Photo permanently deleted' });
+  } catch (error) {
+    console.error('Hard delete photo error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
