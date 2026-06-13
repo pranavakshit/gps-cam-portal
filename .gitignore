@@ -42,3 +42,6 @@ web-portal/build/
 # IDEs
 .idea/
 .vscode/
+
+# Theme(s)
+theme/
