@@ -7,7 +7,10 @@ const prisma = new PrismaClient();
 
 async function main() {
   const adminUser = process.env.ADMIN_USERNAME || 'pranavakshit';
-  const adminPass = process.env.ADMIN_PASSWORD || 't2mji8fwdd';
+  const adminPass = process.env.ADMIN_PASSWORD;
+  if (!adminPass) {
+    throw new Error('FATAL ERROR: ADMIN_PASSWORD environment variable is missing.');
+  }
   const passwordHash = await bcrypt.hash(adminPass, 10);
   
   const admin = await prisma.user.upsert({
@@ -26,7 +29,10 @@ async function main() {
   console.log('Seeded database with admin user:', admin.username);
 
   const viewerUser = process.env.VIEWER_USERNAME || 'viewer';
-  const viewerPass = process.env.VIEWER_PASSWORD || 'viewer';
+  const viewerPass = process.env.VIEWER_PASSWORD;
+  if (!viewerPass) {
+    throw new Error('FATAL ERROR: VIEWER_PASSWORD environment variable is missing.');
+  }
   const viewerHash = await bcrypt.hash(viewerPass, 10);
 
   const viewer = await prisma.user.upsert({

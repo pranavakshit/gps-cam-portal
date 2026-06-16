@@ -1,0 +1,2 @@
+export declare function processLgdZip(buffer: Buffer, onProgress?: (progress: number, message: string) => void, isCancelled?: () => boolean): Promise<void>;
+//# sourceMappingURL=lgdImportService.d.ts.map

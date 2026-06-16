@@ -20,7 +20,12 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
       return;
     }
 
-    const JWT_SECRET: string = process.env.JWT_SECRET || 'fallback-secret-for-dev';
+    const JWT_SECRET: string | undefined = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      console.error('FATAL ERROR: JWT_SECRET environment variable is missing.');
+      res.status(500).json({ error: 'Internal Server Configuration Error' });
+      return;
+    }
 
     jwt.verify(token, JWT_SECRET, (err: jwt.VerifyErrors | null, user: any) => {
       if (err) {

@@ -25,7 +25,12 @@ async function testUpload() {
 
   try {
     const jwt = require('jsonwebtoken');
-    const token = jwt.sign({ id: 1, role: 'ADMIN' }, 'your-secret-key-here', { expiresIn: '1h' });
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      console.error('FATAL ERROR: JWT_SECRET environment variable is missing.');
+      process.exit(1);
+    }
+    const token = jwt.sign({ id: 1, role: 'ADMIN' }, JWT_SECRET, { expiresIn: '1h' });
 
     console.log('Sending request...');
     const res = await fetch('http://localhost:5000/api/locations/import', {
