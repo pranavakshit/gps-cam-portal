@@ -31,8 +31,11 @@ fun LoginScreen(
     
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var totp by remember { mutableStateOf("") }
+    var requires2FA by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var show2FAWarningDialog by remember { mutableStateOf(false) }
 
     // Check if already logged in
     LaunchedEffect(Unit) {
@@ -51,12 +54,25 @@ fun LoginScreen(
                     val apiService = ApiService.create(context)
                     val trimmedUsername = username.trim()
                     val trimmedPassword = password.trim()
-                    val response = apiService.login(LoginRequest(trimmedUsername, trimmedPassword))
+                    val response = apiService.login(LoginRequest(trimmedUsername, trimmedPassword, if (requires2FA) totp else null))
                     
                     if (response.isSuccessful && response.body() != null) {
                         val body = response.body()!!
                         userPreferences.saveAuthData(body.token, body.user.username, body.user.role)
-                        onLoginSuccess()
+                        
+                        if (body.user.isTwoFactorEnabled) {
+                            onLoginSuccess()
+                        } else {
+                            show2FAWarningDialog = true
+                        }
+                    } else if (response.code() == 401) {
+                        val errorBodyString = response.errorBody()?.string() ?: ""
+                        if (errorBodyString.contains("\"requires2FA\":true") || errorBodyString.contains("\"requires2FA\": true")) {
+                            requires2FA = true
+                            errorMessage = null
+                        } else {
+                            errorMessage = "Invalid credentials or token"
+                        }
                     } else {
                         errorMessage = "Invalid credentials or network error"
                     }
@@ -100,37 +116,58 @@ fun LoginScreen(
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
-            OutlinedTextField(
-                value = username,
-                onValueChange = { 
-                    username = it
-                    errorMessage = null 
-                },
-                label = { Text("Username") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
+            if (!requires2FA) {
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { 
+                        username = it
+                        errorMessage = null 
+                    },
+                    label = { Text("Username") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
-                value = password,
-                onValueChange = { 
-                    password = it
-                    errorMessage = null 
-                },
-                label = { Text("Password") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { 
-                    focusManager.clearFocus()
-                    handleLogin() 
-                }),
-                modifier = Modifier.fillMaxWidth()
-            )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { 
+                        password = it
+                        errorMessage = null 
+                    },
+                    label = { Text("Password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { 
+                        focusManager.clearFocus()
+                        handleLogin() 
+                    }),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                OutlinedTextField(
+                    value = totp,
+                    onValueChange = { 
+                        val filtered = it.filter { char -> char.isDigit() }
+                        if (filtered.length <= 6) {
+                            totp = filtered
+                            errorMessage = null 
+                        }
+                    },
+                    label = { Text("6-digit Auth Code") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { 
+                        focusManager.clearFocus()
+                        handleLogin() 
+                    }),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             if (errorMessage != null) {
                 Text(
@@ -155,9 +192,30 @@ fun LoginScreen(
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                 } else {
-                    Text("Login")
+                    Text(if (requires2FA) "Verify 2FA" else "Login")
                 }
             }
+        }
+
+        if (show2FAWarningDialog) {
+            AlertDialog(
+                onDismissRequest = { 
+                    show2FAWarningDialog = false
+                    onLoginSuccess()
+                },
+                title = { Text("Security Warning") },
+                text = { Text("Two-Factor Authentication (2FA) is not enabled on your account. Please log in to the web portal to enable it for your security.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            show2FAWarningDialog = false
+                            onLoginSuccess()
+                        }
+                    ) {
+                        Text("Continue")
+                    }
+                }
+            )
         }
     }
 }

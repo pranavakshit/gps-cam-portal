@@ -7,6 +7,8 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [totp, setTotp] = useState('');
+  const [requires2FA, setRequires2FA] = useState(false);
   const [error, setError] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -18,7 +20,7 @@ const Login: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, totp: requires2FA ? totp : undefined }),
       });
 
       if (response.ok) {
@@ -26,8 +28,17 @@ const Login: React.FC = () => {
         localStorage.setItem('token', data.token);
         if (data.user && data.user.role) {
            localStorage.setItem('role', data.user.role);
+           localStorage.setItem('is2FAEnabled', data.user.isTwoFactorEnabled ? 'true' : 'false');
         }
         navigate('/dashboard');
+      } else if (response.status === 401) {
+        const errorData = await response.json();
+        if (errorData.requires2FA) {
+          setRequires2FA(true);
+          setError('');
+        } else {
+          setError(errorData.error || 'Invalid credentials');
+        }
       } else {
         setError('Invalid credentials');
       }
@@ -50,32 +61,48 @@ const Login: React.FC = () => {
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleLogin} className="login-form">
-          <div className="input-group">
-            <User className="input-icon" size={20} />
-            <input
-              type="text"
-              className="input-field with-icon"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="input-group">
-            <Lock className="input-icon" size={20} />
-            <input
-              type="password"
-              className="input-field with-icon"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+          {!requires2FA ? (
+            <>
+              <div className="input-group">
+                <User className="input-icon" size={20} />
+                <input
+                  type="text"
+                  className="input-field with-icon"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="input-group">
+                <Lock className="input-icon" size={20} />
+                <input
+                  type="password"
+                  className="input-field with-icon"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </>
+          ) : (
+            <div className="input-group">
+              <Lock className="input-icon" size={20} />
+              <input
+                type="text"
+                className="input-field with-icon"
+                placeholder="6-digit Auth Code"
+                value={totp}
+                onChange={(e) => setTotp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                required
+              />
+            </div>
+          )}
 
           <button type="submit" className="btn btn-primary login-btn">
-            Sign In
+            {requires2FA ? 'Verify 2FA' : 'Sign In'}
           </button>
         </form>
       </div>

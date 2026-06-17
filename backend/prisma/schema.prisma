@@ -11,8 +11,11 @@ model User {
   id            Int      @id @default(autoincrement())
   username      String   @unique
   password_hash String
-  role          String   @default("user") // "user" or "admin"
-  photos        Photo[]
+  role                      String   @default("user") // "user" or "admin"
+  twoFactorSecret           String?  @map("two_factor_secret")
+  isTwoFactorEnabled        Boolean  @default(false) @map("is_two_factor_enabled")
+  twoFactorDisableRequested Boolean  @default(false) @map("two_factor_disable_requested")
+  photos                    Photo[]
 }
 
 model LgdState {

@@ -116,3 +116,22 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
     res.status(500).json({ error: 'Failed to delete user' });
   }
 };
+
+export const disableUser2FA = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    await prisma.user.update({
+      where: { id: parseInt(id as string) },
+      data: {
+        isTwoFactorEnabled: false,
+        twoFactorDisableRequested: false,
+        twoFactorSecret: null,
+      },
+    });
+
+    res.status(200).json({ message: '2FA disabled for user successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to disable 2FA for user' });
+  }
+};

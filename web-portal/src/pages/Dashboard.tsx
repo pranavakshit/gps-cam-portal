@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import LocationsManager from '../components/LocationsManager';
 import UsersManager from '../components/UsersManager';
 import DockerManager from '../components/DockerManager';
+import TwoFactorSetup from '../components/TwoFactorSetup';
+import { ShieldAlert } from 'lucide-react';
 import './Dashboard.css';
 
 interface Photo {
@@ -23,6 +25,7 @@ const Dashboard: React.FC = () => {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'gallery' | 'recycle-bin' | 'locations' | 'users' | 'docker'>('gallery');
+  const [show2FASetup, setShow2FASetup] = useState(localStorage.getItem('is2FAEnabled') === 'false');
   const userRole = localStorage.getItem('role') || 'user';
   const username = localStorage.getItem('username') || '';
 
@@ -92,6 +95,7 @@ const Dashboard: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
+    localStorage.removeItem('is2FAEnabled');
     navigate('/');
   };
 
@@ -391,6 +395,9 @@ const Dashboard: React.FC = () => {
           )}
         </div>
         <div className="nav-actions">
+          <button className="btn icon-btn" onClick={() => setShow2FASetup(true)} title="Security Settings">
+            <ShieldAlert size={18} />
+          </button>
           <button className="btn icon-btn" onClick={cycleTheme} aria-label="Toggle theme">
              {/* ... theme svg omitted for brevity, keeping existing ... */}
              <RefreshCw size={18} />
@@ -470,6 +477,13 @@ const Dashboard: React.FC = () => {
           <DockerManager />
         ) : null}
       </main>
+
+      {show2FASetup && <TwoFactorSetup onClose={() => {
+        setShow2FASetup(false);
+        // We set it to 'true' here locally just so it doesn't pop up again on refresh if they closed it without finishing setup
+        // But since they didn't finish, on next fresh login it will pop up again from the API response
+        localStorage.setItem('is2FAEnabled', 'true'); 
+      }} />}
     </div>
   );
 };
