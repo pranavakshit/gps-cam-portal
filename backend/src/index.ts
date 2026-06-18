@@ -18,7 +18,8 @@ const allowedOrigins = [
   'http://localhost',
   'https://pranavakshit.in',
   'https://www.pranavakshit.in',
-  'https://api.pranavakshit.in'
+  'https://api.pranavakshit.in',
+  'https://gps.pranavakshit.in'
 ];
 
 app.use(cors({
