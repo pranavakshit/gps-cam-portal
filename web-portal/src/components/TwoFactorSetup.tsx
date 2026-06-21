@@ -12,6 +12,7 @@ const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({ onClose }) => {
   const [totp, setTotp] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const isCurrentlyEnabled = localStorage.getItem('is2FAEnabled') === 'true';
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -104,12 +105,29 @@ const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({ onClose }) => {
 
         {setupStep === 'initial' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <p style={{ color: 'var(--text-color)' }}>
-              Two-Factor Authentication (2FA) adds an extra layer of security to your account by requiring a code from your authenticator app when you sign in.
-            </p>
-            <button className="btn btn-primary" onClick={handleGenerate} disabled={loading}>
-              {loading ? 'Processing...' : 'Setup 2FA'}
-            </button>
+            {isCurrentlyEnabled ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4caf50', justifyContent: 'center', marginBottom: '8px' }}>
+                  <CheckCircle size={24} />
+                  <h3 style={{ margin: 0 }}>2FA is currently ENABLED</h3>
+                </div>
+                <p style={{ color: 'var(--text-color)' }}>
+                  Your account is protected. Generating a new code will invalidate your old one.
+                </p>
+                <button className="btn btn-primary" onClick={handleGenerate} disabled={loading} style={{ backgroundColor: '#ff9800' }}>
+                  {loading ? 'Processing...' : 'Regenerate 2FA (Invalidates Old)'}
+                </button>
+              </>
+            ) : (
+              <>
+                <p style={{ color: 'var(--text-color)' }}>
+                  Two-Factor Authentication (2FA) adds an extra layer of security to your account by requiring a code from your authenticator app when you sign in.
+                </p>
+                <button className="btn btn-primary" onClick={handleGenerate} disabled={loading}>
+                  {loading ? 'Processing...' : 'Setup 2FA'}
+                </button>
+              </>
+            )}
             <button className="btn btn-secondary" onClick={handleRequestDisable} disabled={loading}>
               Request Admin to Disable 2FA
             </button>
