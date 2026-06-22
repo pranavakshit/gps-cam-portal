@@ -17,6 +17,14 @@ function findHeaderRow(data: any[][], keywords: string[]): number {
     return -1;
 }
 
+async function chunkArray<T>(array: T[], size: number): Promise<T[][]> {
+    const result = [];
+    for (let i = 0; i < array.length; i += size) {
+        result.push(array.slice(i, i + size));
+    }
+    return result;
+}
+
 export async function processLgdZip(buffer: Buffer, onProgress?: (progress: number, message: string) => void, isCancelled?: () => boolean) {
     if (onProgress) onProgress(0, 'Reading ZIP archive...');
     const zip = new AdmZip(buffer);
@@ -43,7 +51,6 @@ export async function processLgdZip(buffer: Buffer, onProgress?: (progress: numb
     
     let absoluteTotalRows = 0;
     
-    // Pass 1: Calculate total absolute rows to display true progress
     for (let i = 0; i < validEntries.length; i++) {
         if (isCancelled && isCancelled()) return;
         const entry = validEntries[i];
@@ -61,7 +68,6 @@ export async function processLgdZip(buffer: Buffer, onProgress?: (progress: numb
     let absoluteProcessedRows = 0;
     const startTime = Date.now();
 
-    // Pass 2: Actually process and insert the data
     for (let i = 0; i < validEntries.length; i++) {
         if (isCancelled && isCancelled()) return;
         const entry = validEntries[i];
@@ -111,6 +117,10 @@ export async function processLgdZip(buffer: Buffer, onProgress?: (progress: numb
             }
         };
 
+        const uniqueDistricts = new Map<number, any>();
+        const uniqueSubDistricts = new Map<number, any>();
+        const uniqueVillages = new Map<number, any>();
+
         if (lowerName.includes('villageofspecificstate')) {
             const headerIdx = findHeaderRow(data, ['village code', 'village name']);
             if (headerIdx !== -1) {
@@ -128,27 +138,15 @@ export async function processLgdZip(buffer: Buffer, onProgress?: (progress: numb
                     const code = parseInt(row[5]);
                     const name = row[7] || row[6];
                     
-                    if (!isNaN(districtCode)) {
-                        await prisma.lgdDistrict.upsert({
-                            where: { lgdCode: districtCode },
-                            update: {},
-                            create: { lgdCode: districtCode, name: String(districtName), stateCode }
-                        });
+                    if (!isNaN(districtCode) && !uniqueDistricts.has(districtCode)) {
+                        uniqueDistricts.set(districtCode, { lgdCode: districtCode, name: String(districtName), stateCode });
                     }
-
-                    if (!isNaN(subDistrictCode)) {
-                        await prisma.lgdSubDistrict.upsert({
-                            where: { lgdCode: subDistrictCode },
-                            update: {},
-                            create: { lgdCode: subDistrictCode, name: String(subDistrictName), districtCode }
-                        });
+                    if (!isNaN(subDistrictCode) && !uniqueSubDistricts.has(subDistrictCode)) {
+                        uniqueSubDistricts.set(subDistrictCode, { lgdCode: subDistrictCode, name: String(subDistrictName), districtCode });
                     }
-                    
-                    await prisma.lgdVillage.upsert({
-                        where: { lgdCode: code },
-                        update: { name: String(name), subDistrictCode },
-                        create: { lgdCode: code, name: String(name), subDistrictCode }
-                    });
+                    if (!isNaN(code) && !uniqueVillages.has(code)) {
+                        uniqueVillages.set(code, { lgdCode: code, name: String(name), subDistrictCode });
+                    }
                 }
             } else {
                 absoluteProcessedRows += data.length;
@@ -169,19 +167,12 @@ export async function processLgdZip(buffer: Buffer, onProgress?: (progress: numb
                     const code = parseInt(row[3]);
                     const name = row[5] || row[4];
                     
-                    if (!isNaN(districtCode)) {
-                        await prisma.lgdDistrict.upsert({
-                            where: { lgdCode: districtCode },
-                            update: {},
-                            create: { lgdCode: districtCode, name: String(districtName), stateCode }
-                        });
+                    if (!isNaN(districtCode) && !uniqueDistricts.has(districtCode)) {
+                        uniqueDistricts.set(districtCode, { lgdCode: districtCode, name: String(districtName), stateCode });
                     }
-
-                    await prisma.lgdSubDistrict.upsert({
-                        where: { lgdCode: code },
-                        update: { name: String(name), districtCode },
-                        create: { lgdCode: code, name: String(name), districtCode }
-                    });
+                    if (!isNaN(code) && !uniqueSubDistricts.has(code)) {
+                        uniqueSubDistricts.set(code, { lgdCode: code, name: String(name), districtCode });
+                    }
                 }
             } else {
                 absoluteProcessedRows += data.length;
@@ -200,17 +191,42 @@ export async function processLgdZip(buffer: Buffer, onProgress?: (progress: numb
                     const code = parseInt(row[1]);
                     const name = row[3] || row[2]; 
                     
-                    await prisma.lgdDistrict.upsert({
-                        where: { lgdCode: code },
-                        update: { name: String(name), stateCode },
-                        create: { lgdCode: code, name: String(name), stateCode }
-                    });
+                    if (!isNaN(code) && !uniqueDistricts.has(code)) {
+                        uniqueDistricts.set(code, { lgdCode: code, name: String(name), stateCode });
+                    }
                 }
             } else {
                 absoluteProcessedRows += data.length;
             }
         } else {
             absoluteProcessedRows += data.length;
+        }
+
+        // Perform bulk inserts
+        if (onProgress) onProgress(Math.min(99, 5 + (absoluteProcessedRows / absoluteTotalRows) * 95), `Saving database chunks...`);
+        
+        const districtArray = Array.from(uniqueDistricts.values());
+        if (districtArray.length > 0) {
+            const chunks = await chunkArray(districtArray, 10000);
+            for (const chunk of chunks) {
+                await prisma.lgdDistrict.createMany({ data: chunk, skipDuplicates: true });
+            }
+        }
+
+        const subDistrictArray = Array.from(uniqueSubDistricts.values());
+        if (subDistrictArray.length > 0) {
+            const chunks = await chunkArray(subDistrictArray, 10000);
+            for (const chunk of chunks) {
+                await prisma.lgdSubDistrict.createMany({ data: chunk, skipDuplicates: true });
+            }
+        }
+
+        const villageArray = Array.from(uniqueVillages.values());
+        if (villageArray.length > 0) {
+            const chunks = await chunkArray(villageArray, 10000);
+            for (const chunk of chunks) {
+                await prisma.lgdVillage.createMany({ data: chunk, skipDuplicates: true });
+            }
         }
     }
     
