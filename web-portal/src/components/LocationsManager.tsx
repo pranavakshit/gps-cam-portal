@@ -150,11 +150,15 @@ const LocationsManager: React.FC = () => {
       const decoder = new TextDecoder();
       
       let doneReading = false;
+      let buffer = '';
       while (!doneReading) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n\n');
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+        
         for (const line of lines) {
             if (line.trim().startsWith('data:')) {
                 try {
@@ -176,7 +180,7 @@ const LocationsManager: React.FC = () => {
                         break;
                     }
                 } catch (e) {
-                    console.error('Error parsing stream data', e);
+                    console.error('Error parsing stream data', e, line);
                 }
             }
         }
