@@ -15,6 +15,7 @@ interface LocationItem {
 const LocationsManager: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadPhaseProgress, setUploadPhaseProgress] = useState<number | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
   
@@ -130,71 +131,85 @@ const LocationsManager: React.FC = () => {
     setAbortController(controller);
     
     try {
-      const res = await fetch(`${API_URL}/api/locations/import`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-        body: formData,
-        signal: controller.signal
-      });
-      
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setMessage({ text: err.error || 'Failed to sync data', type: 'error' });
-        setUploading(false);
-        setAbortController(null);
-        return;
-      }
-      
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("No readable stream");
-      const decoder = new TextDecoder();
-      
-      let doneReading = false;
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${API_URL}/api/locations/import`);
+      xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('token')}`);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = (event.loaded / event.total) * 100;
+          setUploadPhaseProgress(Math.round(percentComplete));
+        }
+      };
+
+      let lastProcessedIndex = 0;
       let buffer = '';
-      while (!doneReading) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        buffer += decoder.decode(value, { stream: true });
+
+      xhr.onprogress = () => {
+        setUploadPhaseProgress(null); // Clear upload progress once server starts responding
+        const newText = xhr.responseText.substring(lastProcessedIndex);
+        lastProcessedIndex = xhr.responseText.length;
+
+        buffer += newText;
         const lines = buffer.split('\n\n');
         buffer = lines.pop() || '';
-        
+
         for (const line of lines) {
-            if (line.trim().startsWith('data:')) {
-                try {
-                    const data = JSON.parse(line.replace('data:', '').trim());
-                    if (data.error) {
-                        setMessage({ text: data.error, type: 'error' });
-                        doneReading = true;
-                        break;
-                    }
-                    if (data.progress !== undefined) {
-                        setUploadProgress(data.progress);
-                        setMessage({ text: data.message || 'Syncing...', type: 'success' });
-                    }
-                    if (data.done) {
-                        setMessage({ text: 'LGD Data synchronized successfully!', type: 'success' });
-                        setFile(null);
-                        fetchItems();
-                        doneReading = true;
-                        break;
-                    }
-                } catch (e) {
-                    console.error('Error parsing stream data', e, line);
-                }
+          if (line.trim().startsWith('data:')) {
+            try {
+              const data = JSON.parse(line.replace('data:', '').trim());
+              if (data.error) {
+                setMessage({ text: data.error, type: 'error' });
+                xhr.abort();
+                break;
+              }
+              if (data.progress !== undefined) {
+                setUploadProgress(data.progress);
+                setMessage({ text: data.message || 'Syncing...', type: 'success' });
+              }
+              if (data.done) {
+                setMessage({ text: 'LGD Data synchronized successfully!', type: 'success' });
+                setFile(null);
+                fetchItems();
+                break;
+              }
+            } catch (e) {
+              console.error('Error parsing stream data', e, line);
             }
+          }
         }
-      }
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        setMessage({ text: 'Sync cancelled by user.', type: 'error' });
-      } else {
+      };
+
+      xhr.onload = () => {
+        if (xhr.status !== 200) {
+          let errText = 'Failed to sync data';
+          try { errText = JSON.parse(xhr.responseText).error || errText; } catch (e) {}
+          setMessage({ text: errText, type: 'error' });
+        }
+        setUploading(false);
+        setAbortController(null);
+        setTimeout(() => setUploadProgress(0), 3000);
+      };
+
+      xhr.onerror = () => {
         setMessage({ text: 'Error connecting to server.', type: 'error' });
-      }
-    } finally {
+        setUploading(false);
+        setAbortController(null);
+      };
+
+      xhr.onabort = () => {
+        setMessage({ text: 'Sync cancelled by user.', type: 'error' });
+        setUploading(false);
+        setAbortController(null);
+        setTimeout(() => setUploadProgress(0), 3000);
+      };
+
+      controller.signal.addEventListener('abort', () => xhr.abort());
+      xhr.send(formData);
+    } catch (err: any) {
+      setMessage({ text: 'Error connecting to server.', type: 'error' });
       setUploading(false);
       setAbortController(null);
-      setTimeout(() => setUploadProgress(0), 3000);
     }
   };
 
@@ -341,9 +356,12 @@ const LocationsManager: React.FC = () => {
               </div>
             )}
             
-            {(uploading || uploadProgress > 0) && (
-              <div className="progress-bar-container" style={{ width: '100%', height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', marginTop: '10px', overflow: 'hidden' }}>
-                <div className="progress-bar-fill" style={{ width: `${uploadProgress}%`, height: '100%', backgroundColor: '#4f46e5', transition: 'width 0.3s ease' }}></div>
+            {(uploading || uploadProgress > 0 || uploadPhaseProgress !== null) && (
+              <div className="progress-bar-container" style={{ width: '100%', height: '14px', backgroundColor: '#e2e8f0', borderRadius: '7px', marginTop: '10px', overflow: 'hidden', position: 'relative' }}>
+                <div className="progress-bar-fill" style={{ width: `${uploadPhaseProgress !== null ? uploadPhaseProgress : uploadProgress}%`, height: '100%', backgroundColor: uploadPhaseProgress !== null ? '#3b82f6' : '#10b981', transition: 'width 0.3s ease' }}></div>
+                <span style={{ position: 'absolute', width: '100%', textAlign: 'center', fontSize: '10px', top: '0', color: uploadPhaseProgress !== null && uploadPhaseProgress > 50 ? 'white' : 'black', fontWeight: 'bold' }}>
+                  {uploadPhaseProgress !== null ? `Uploading to server... ${uploadPhaseProgress}%` : `Parsing database... ${uploadProgress.toFixed(0)}%`}
+                </span>
               </div>
             )}
             
