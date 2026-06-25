@@ -139,6 +139,7 @@ const LocationsManager: React.FC = () => {
         if (event.lengthComputable) {
           const percentComplete = (event.loaded / event.total) * 100;
           setUploadPhaseProgress(Math.round(percentComplete));
+          setMessage({ text: `Uploading to server... ${Math.round(percentComplete)}%`, type: 'success' });
         }
       };
 
@@ -357,11 +358,8 @@ const LocationsManager: React.FC = () => {
             )}
             
             {(uploading || uploadProgress > 0 || uploadPhaseProgress !== null) && (
-              <div className="progress-bar-container" style={{ width: '100%', height: '14px', backgroundColor: '#e2e8f0', borderRadius: '7px', marginTop: '10px', overflow: 'hidden', position: 'relative' }}>
+              <div className="progress-bar-container" style={{ width: '100%', height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', marginTop: '10px', overflow: 'hidden' }}>
                 <div className="progress-bar-fill" style={{ width: `${uploadPhaseProgress !== null ? uploadPhaseProgress : uploadProgress}%`, height: '100%', backgroundColor: uploadPhaseProgress !== null ? '#3b82f6' : '#10b981', transition: 'width 0.3s ease' }}></div>
-                <span style={{ position: 'absolute', width: '100%', textAlign: 'center', fontSize: '10px', top: '0', color: uploadPhaseProgress !== null && uploadPhaseProgress > 50 ? 'white' : 'black', fontWeight: 'bold' }}>
-                  {uploadPhaseProgress !== null ? `Uploading to server... ${uploadPhaseProgress}%` : `Parsing database... ${uploadProgress.toFixed(0)}%`}
-                </span>
               </div>
             )}
             
