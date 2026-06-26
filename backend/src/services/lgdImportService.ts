@@ -128,6 +128,9 @@ export async function processLgdZip(buffer: Buffer, onProgress?: (progress: numb
                 for (let j = headerIdx + 2; j < data.length; j++) {
                     if (isCancelled && isCancelled()) return;
                     reportRowProgress();
+                    if (absoluteProcessedRows % 500 === 0) {
+                        await new Promise(resolve => setImmediate(resolve));
+                    }
                     const row = data[j];
                     if (!row || !row[5] || isNaN(parseInt(row[5]))) continue;
                     
@@ -159,6 +162,9 @@ export async function processLgdZip(buffer: Buffer, onProgress?: (progress: numb
                 for (let j = headerIdx + 2; j < data.length; j++) {
                     if (isCancelled && isCancelled()) return;
                     reportRowProgress();
+                    if (absoluteProcessedRows % 500 === 0) {
+                        await new Promise(resolve => setImmediate(resolve));
+                    }
                     const row = data[j];
                     if (!row || !row[3] || isNaN(parseInt(row[3]))) continue;
                     
@@ -204,6 +210,8 @@ export async function processLgdZip(buffer: Buffer, onProgress?: (progress: numb
 
         // Perform bulk inserts
         if (onProgress) onProgress(Math.min(99, 5 + (absoluteProcessedRows / absoluteTotalRows) * 95), `Saving database chunks...`);
+        console.log(`Finished parsing ${entryName}. Starting database inserts...`);
+        console.time(`inserts-${entryName}`);
         
         const districtArray = Array.from(uniqueDistricts.values());
         if (districtArray.length > 0) {
@@ -228,6 +236,8 @@ export async function processLgdZip(buffer: Buffer, onProgress?: (progress: numb
                 await prisma.lgdVillage.createMany({ data: chunk, skipDuplicates: true });
             }
         }
+        
+        console.timeEnd(`inserts-${entryName}`);
     }
     
     if (onProgress) onProgress(100, 'Database sync complete.');
