@@ -128,6 +128,7 @@ export async function processLgdZip(buffer: Buffer, onProgress?: (progress: numb
                 for (let j = headerIdx + 2; j < data.length; j++) {
                     if (isCancelled && isCancelled()) return;
                     reportRowProgress();
+                    if (absoluteProcessedRows % 100 === 0) console.log(`Processing row ${absoluteProcessedRows} at ${Date.now()}`);
                     if (absoluteProcessedRows % 500 === 0) {
                         await new Promise(resolve => setImmediate(resolve));
                     }
