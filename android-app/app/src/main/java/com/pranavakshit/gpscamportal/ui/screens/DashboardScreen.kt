@@ -83,6 +83,12 @@ fun DashboardScreen(
                         selected = selectedTab == 2,
                         onClick = { selectedTab = 2 }
                     )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Settings, contentDescription = "System") },
+                        label = { Text("System") },
+                        selected = selectedTab == 3,
+                        onClick = { selectedTab = 3 }
+                    )
                 }
             }
         },
@@ -100,6 +106,7 @@ fun DashboardScreen(
                     0 -> AdminPhotosTab()
                     1 -> AdminUsersTab()
                     2 -> AdminLocationsTab()
+                    3 -> AdminSystemTab()
                 }
             } else {
                 UserPhotosTab()

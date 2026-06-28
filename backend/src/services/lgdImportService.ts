@@ -1,5 +1,4 @@
 import AdmZip from 'adm-zip';
-import * as xlsx from 'xlsx';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -23,6 +22,27 @@ async function chunkArray<T>(array: T[], size: number): Promise<T[][]> {
         result.push(array.slice(i, i + size));
     }
     return result;
+}
+
+function parseHtmlTable(htmlStr: string): any[][] {
+    const data: any[][] = [];
+    const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    const tdRegex = /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi;
+    
+    let trMatch;
+    while ((trMatch = trRegex.exec(htmlStr)) !== null) {
+        const rowHtml = trMatch[1] || '';
+        const row = [];
+        let tdMatch;
+        while ((tdMatch = tdRegex.exec(rowHtml)) !== null) {
+            const cellText = (tdMatch[1] || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/gi, ' ').trim();
+            row.push(cellText);
+        }
+        if (row.length > 0) {
+            data.push(row);
+        }
+    }
+    return data;
 }
 
 export async function processLgdZip(buffer: Buffer, onProgress?: (progress: number, message: string) => void, isCancelled?: () => boolean) {
@@ -58,10 +78,8 @@ export async function processLgdZip(buffer: Buffer, onProgress?: (progress: numb
         if (onProgress) onProgress((i / validEntries.length) * 5, `Analyzing file size: ${entry.name}...`);
         
         const fileBuffer = entry.getData();
-        const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        if (!sheetName || !workbook.Sheets[sheetName]) continue;
-        const data = xlsx.utils.sheet_to_json<any[]>(workbook.Sheets[sheetName], { header: 1 });
+        const htmlStr = fileBuffer.toString('utf-8');
+        const data = parseHtmlTable(htmlStr);
         absoluteTotalRows += data.length;
     }
 
@@ -76,10 +94,8 @@ export async function processLgdZip(buffer: Buffer, onProgress?: (progress: numb
         const lowerName = entryName.toLowerCase();
         
         const fileBuffer = entry.getData();
-        const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        if (!sheetName || !workbook.Sheets[sheetName]) continue;
-        const data = xlsx.utils.sheet_to_json<any[]>(workbook.Sheets[sheetName], { header: 1 });
+        const htmlStr = fileBuffer.toString('utf-8');
+        const data = parseHtmlTable(htmlStr);
         
         const titleText = data[1]?.[0] || '';
         const stateCodeMatch = titleText.match(/State Code\s*:\s*(\d+)/i);

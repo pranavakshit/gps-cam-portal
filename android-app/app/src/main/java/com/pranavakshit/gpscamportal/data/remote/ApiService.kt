@@ -99,6 +99,12 @@ interface ApiService {
     @POST("/api/locations/import")
     suspend fun importLocations(@Part zipfile: MultipartBody.Part): Response<Unit>
 
+    @GET("/api/system/docker/stats")
+    suspend fun getDockerStats(): Response<DockerStats>
+
+    @POST("/api/system/docker/prune")
+    suspend fun pruneDocker(): Response<Unit>
+
     companion object {
         private const val BASE_URL = "https://api.pranavakshit.in/"
 

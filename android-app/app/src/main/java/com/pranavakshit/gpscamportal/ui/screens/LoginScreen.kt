@@ -63,7 +63,7 @@ fun LoginScreen(
                         if (body.user.isTwoFactorEnabled) {
                             onLoginSuccess()
                         } else {
-                            show2FAWarningDialog = true
+                            onLoginSuccess() // Removed warning dialog
                         }
                     } else if (response.code() == 401) {
                         val errorBodyString = response.errorBody()?.string() ?: ""

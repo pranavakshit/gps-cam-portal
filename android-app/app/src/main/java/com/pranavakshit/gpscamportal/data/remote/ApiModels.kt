@@ -64,3 +64,20 @@ data class DeletionRequest(
 data class UpdateRoleRequest(
     val role: String
 )
+
+data class DockerStats(
+    val memoryUsageGB: Double,
+    val memoryLimitGB: Double,
+    val memoryPercentage: Double,
+    val cpuPercentage: Double,
+    val totalContainers: Int,
+    val containers: List<DockerContainerInfo>
+)
+
+data class DockerContainerInfo(
+    val id: String,
+    val name: String,
+    val status: String,
+    val state: String,
+    val size: String
+)

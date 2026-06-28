@@ -25,7 +25,7 @@ const Dashboard: React.FC = () => {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'gallery' | 'recycle-bin' | 'locations' | 'users' | 'docker'>('gallery');
-  const [show2FASetup, setShow2FASetup] = useState(localStorage.getItem('is2FAEnabled') === 'false');
+  const [show2FASetup, setShow2FASetup] = useState(false);
   const userRole = localStorage.getItem('role') || 'user';
   const username = localStorage.getItem('username') || '';
 
