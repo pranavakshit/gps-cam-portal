@@ -99,10 +99,10 @@ interface ApiService {
     @POST("/api/locations/import")
     suspend fun importLocations(@Part zipfile: MultipartBody.Part): Response<Unit>
 
-    @GET("/api/system/docker/stats")
+    @GET("/api/docker/stats")
     suspend fun getDockerStats(): Response<DockerStats>
 
-    @POST("/api/system/docker/prune")
+    @POST("/api/docker/prune")
     suspend fun pruneDocker(): Response<Unit>
 
     companion object {
