@@ -9,7 +9,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.pranavakshit.gpscamportal"
+        applicationId = "in.pranavakshit.gps"
         minSdk = 21
         targetSdk = 36
         versionCode = 1
