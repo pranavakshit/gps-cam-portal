@@ -2,6 +2,11 @@ services:
   db:
     image: mysql:8
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-gps_cam_portal}
@@ -13,6 +18,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "5000:5000"
     volumes:
@@ -37,6 +47,11 @@ services:
       context: ./web-portal
       dockerfile: Dockerfile.dev
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "5173:5173"
     volumes:
