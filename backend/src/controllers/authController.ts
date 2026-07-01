@@ -4,8 +4,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '../db/prisma';
 
 import jwt from 'jsonwebtoken';
-import otplib from 'otplib';
-const { authenticator } = otplib;
+import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
 import { AuthRequest } from '../middleware/authMiddleware';
 export const login = async (req: Request, res: Response): Promise<void> => {
