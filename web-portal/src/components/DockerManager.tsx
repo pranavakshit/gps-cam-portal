@@ -22,6 +22,7 @@ const DockerManager: React.FC = () => {
   const [logs, setLogs] = useState('');
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
   const [activeContainerId, setActiveContainerId] = useState('');
+  const userRole = localStorage.getItem('role') || 'user';
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -120,10 +121,14 @@ const DockerManager: React.FC = () => {
                 <td style={{ padding: '12px', textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                     <button className="btn icon-btn" onClick={() => fetchLogs(c.ID)} title="View Logs"><FileText size={16}/></button>
-                    {!c.Status.includes('Up') && (
-                      <button className="btn icon-btn" onClick={() => handleAction('start', c.ID)} title="Start"><Play size={16}/></button>
+                    {userRole !== 'VISITOR' && (
+                      <>
+                        {!c.Status.includes('Up') && (
+                          <button className="btn icon-btn" onClick={() => handleAction('start', c.ID)} title="Start"><Play size={16}/></button>
+                        )}
+                        <button className="btn icon-btn" onClick={() => handleAction('restart', c.ID)} title="Restart"><RefreshCw size={16}/></button>
+                      </>
                     )}
-                    <button className="btn icon-btn" onClick={() => handleAction('restart', c.ID)} title="Restart"><RefreshCw size={16}/></button>
                   </div>
                 </td>
               </tr>

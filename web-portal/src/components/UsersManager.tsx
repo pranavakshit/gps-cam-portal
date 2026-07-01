@@ -12,6 +12,7 @@ const UsersManager: React.FC = () => {
   const [users, setUsers] = useState<UserModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const userRole = localStorage.getItem('role') || 'user';
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -143,9 +144,11 @@ const UsersManager: React.FC = () => {
           <button className="btn btn-outline" onClick={fetchUsers} title="Refresh Users List">
             <RefreshCw size={18} style={{ marginRight: '8px' }} /> Sync
           </button>
-          <button className="btn btn-primary" onClick={openCreateModal}>
-            <Plus size={18} style={{ marginRight: '8px' }} /> Add User
-          </button>
+          {userRole !== 'VISITOR' && (
+            <button className="btn btn-primary" onClick={openCreateModal}>
+              <Plus size={18} style={{ marginRight: '8px' }} /> Add User
+            </button>
+          )}
         </div>
       </div>
 
@@ -182,9 +185,13 @@ const UsersManager: React.FC = () => {
                 </td>
                 <td style={{ padding: '12px', textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button className="btn icon-btn" onClick={() => openEditModal(user)} title="Edit Role/Username"><Edit2 size={16}/></button>
-                    <button className="btn icon-btn" onClick={() => openPasswordModal(user)} title="Change Password"><Key size={16}/></button>
-                    <button className="btn icon-btn" onClick={() => handleDelete(user.id)} title="Delete User" style={{ color: '#ff4444' }}><Trash2 size={16}/></button>
+                    {userRole !== 'VISITOR' && (
+                      <>
+                        <button className="btn icon-btn" onClick={() => openEditModal(user)} title="Edit Role/Username"><Edit2 size={16}/></button>
+                        <button className="btn icon-btn" onClick={() => openPasswordModal(user)} title="Change Password"><Key size={16}/></button>
+                        <button className="btn icon-btn" onClick={() => handleDelete(user.id)} title="Delete User" style={{ color: '#ff4444' }}><Trash2 size={16}/></button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

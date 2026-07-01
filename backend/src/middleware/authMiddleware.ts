@@ -48,3 +48,19 @@ export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction
     res.status(403).json({ error: 'Forbidden: Admin access required' });
   }
 };
+
+export const requireAdminOrVisitor = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  if (req.user && (req.user.role === 'ADMIN' || req.user.role === 'VISITOR')) {
+    next();
+  } else {
+    res.status(403).json({ error: 'Forbidden: Admin or Visitor access required' });
+  }
+};
+
+export const forbidVisitor = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  if (req.user && req.user.role === 'VISITOR') {
+    res.status(403).json({ error: 'Forbidden: Visitors cannot perform write operations' });
+  } else {
+    next();
+  }
+};

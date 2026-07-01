@@ -363,21 +363,19 @@ const Dashboard: React.FC = () => {
           >
             Photo Gallery
           </button>
-          {userRole !== 'VISITOR' && (
-            <button 
-              className={`tab-btn ${activeTab === 'recycle-bin' ? 'active' : ''}`}
-              onClick={() => setActiveTab('recycle-bin')}
-            >
-              Recycle Bin
-            </button>
-          )}
+          <button 
+            className={`tab-btn ${activeTab === 'recycle-bin' ? 'active' : ''}`}
+            onClick={() => setActiveTab('recycle-bin')}
+          >
+            Recycle Bin
+          </button>
           <button 
             className={`tab-btn ${activeTab === 'locations' ? 'active' : ''}`}
             onClick={() => setActiveTab('locations')}
           >
             Locations
           </button>
-          {userRole === 'ADMIN' && (
+          {(userRole === 'ADMIN' || userRole === 'VISITOR') && (
             <>
               <button 
                 className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
@@ -471,9 +469,9 @@ const Dashboard: React.FC = () => {
           </>
         ) : activeTab === 'locations' ? (
           <LocationsManager />
-        ) : activeTab === 'users' && userRole === 'ADMIN' ? (
+        ) : activeTab === 'users' && (userRole === 'ADMIN' || userRole === 'VISITOR') ? (
           <UsersManager />
-        ) : activeTab === 'docker' && userRole === 'ADMIN' ? (
+        ) : activeTab === 'docker' && (userRole === 'ADMIN' || userRole === 'VISITOR') ? (
           <DockerManager />
         ) : null}
       </main>

@@ -14,7 +14,7 @@ import {
   updateLocation,
   deleteLocation
 } from '../controllers/locationController';
-import { authenticateJWT } from '../middleware/authMiddleware';
+import { authenticateJWT, forbidVisitor } from '../middleware/authMiddleware';
 
 const router = Router();
 import fs from 'fs';
@@ -47,12 +47,12 @@ router.get('/search', searchLocations);
 router.get('/states/:id/offline-bundle', getOfflineBundle);
 
 // Protected Admin Endpoints
-router.post('/import', authenticateJWT, upload.single('zipfile'), importLgdData);
+router.post('/import', authenticateJWT, forbidVisitor, upload.single('zipfile'), importLgdData);
 
 // CRUD Endpoints for Drill-Down Editor
 router.get('/search', authenticateJWT, searchLocations);
-router.post('/', authenticateJWT, createLocation);
-router.put('/:id', authenticateJWT, updateLocation);
-router.delete('/:id', authenticateJWT, deleteLocation);
+router.post('/', authenticateJWT, forbidVisitor, createLocation);
+router.put('/:id', authenticateJWT, forbidVisitor, updateLocation);
+router.delete('/:id', authenticateJWT, forbidVisitor, deleteLocation);
 
 export default router;
