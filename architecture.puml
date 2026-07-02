@@ -1,0 +1,26 @@
+@startuml
+skinparam componentStyle uml2
+
+actor "Field Agent (Android)" as Agent
+actor "Admin/User (Browser)" as Admin
+
+node "Docker Compose Environment" {
+  component "Nginx Proxy\n(SSL Termination)" as Nginx
+  component "Backend API\n(Node/Express)" as Backend
+  component "Web Portal\n(Vite/React)" as Web
+  database "MySQL DB" as DB
+  folder "Storage Volume\n(Uploaded Photos)" as Storage
+  component "Docker Daemon\n(Socket)" as DockerSock
+}
+
+Agent --> Backend : HTTP/HTTPS (JWT)
+Agent --> Web : (optional) Web view
+Web --> Backend : HTTP/HTTPS (JWT)
+Backend --> DB : SQL Queries
+Backend --> Storage : Store/Retrieve photos
+Backend --> DockerSock : Docker control API
+Nginx --> Backend : Reverse Proxy
+Nginx --> Web : Serve static assets
+Admin --> Nginx : HTTPS requests
+
+@enduml
