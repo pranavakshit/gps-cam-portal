@@ -50,3 +50,7 @@ release/
 
 keys/
 ssh_scripts/
+
+crash*.txt
+logs.txt
+recent_crash.txt
