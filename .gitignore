@@ -35,7 +35,7 @@ backend/uploads/
 backend/prisma/*.db
 backend/prisma/*.db-journal
 android-app/app/release.keystore
-
+lgd-data.zip
 # Web Portal
 web-portal/dist/
 web-portal/build/
