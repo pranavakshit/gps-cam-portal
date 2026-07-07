@@ -50,7 +50,11 @@ Once running, open your browser to:
 - **Web Portal:** [http://localhost:5173](http://localhost:5173)
 - **Backend API:** [http://localhost:5000](http://localhost:5000)
 
-**Default Secure Login:**
+**User Accounts & Registration:**
+> [!IMPORTANT]
+> **There is no public user signup support.** All user credentials (for both field agents and visitors) must be manually generated and managed by an Administrator through the Web Portal. 
+
+**Default Admin Login:**
 - Username: `admin`
 - Password: `admin`
 *(Note: These credentials can be overridden using the `ADMIN_USERNAME` and `ADMIN_PASSWORD` environment variables in `docker-compose.yml` for production deployments).*
