@@ -54,3 +54,5 @@ ssh_scripts/
 crash*.txt
 logs.txt
 recent_crash.txt
+
+release_notes.md
