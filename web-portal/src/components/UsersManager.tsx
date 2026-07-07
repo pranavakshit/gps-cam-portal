@@ -231,6 +231,7 @@ const UsersManager: React.FC = () => {
               >
                 <option value="user">User</option>
                 <option value="ADMIN">Administrator</option>
+                <option value="VISITOR">Visitor</option>
               </select>
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
                 <button type="button" className="btn" onClick={() => setIsModalOpen(false)}>Cancel</button>
