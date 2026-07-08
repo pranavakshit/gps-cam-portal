@@ -1,6 +1,7 @@
 # Project Report: GPS Cam Portal
 
 **Live Deployment URL:** [https://gps.pranavakshit.in](https://gps.pranavakshit.in)
+**Visual Case Study & Architecture:** [https://pranavakshit.in/case-study?id=gps-cam-portal](https://pranavakshit.in/case-study?id=gps-cam-portal)
 
 ## 1. Project Objective
 **GPS Cam Portal** is an end-to-end field data collection and synchronization system. The primary goal of the project is to allow field agents operating in remote environments (often with unstable network connectivity) to capture photographic evidence securely tagged with precise GPS coordinates and official Local Government Directory (LGD) spatial hierarchies.

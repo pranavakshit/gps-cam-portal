@@ -4,6 +4,8 @@ This project is a two-part system: an offline-first Android app for capturing GP
 
 ## Documentation
 
+**[Visual Case Study & Architecture](https://pranavakshit.in/case-study?id=gps-cam-portal)**: An online overview containing all architecture diagrams and brief details of the system.
+
 Please refer to the following documents in this repository for comprehensive details on the system:
 - **[Brief Project Report](brief_project_report.md)**: A high-level overview of the project objectives and core features.
 - **[Engineering Report](engineering_report.md)**: A detailed technical walkthrough of the architecture, security, and deployment.
