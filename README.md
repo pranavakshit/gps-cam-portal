@@ -1,8 +1,16 @@
 # GPS Cam Portal
 
-# GPS Cam Portal
-
 This project is a two-part system: an offline-first Android app for capturing GPS-stamped photos, and a web portal (React + Node.js + MySQL) to view and manage them.
+
+## Documentation
+
+Please refer to the following documents in this repository for comprehensive details on the system:
+- **[Brief Project Report](brief_project_report.md)**: A high-level overview of the project objectives and core features.
+- **[Engineering Report](engineering_report.md)**: A detailed technical walkthrough of the architecture, security, and deployment.
+- **Architecture Diagrams**: 
+  - [Combined System Architecture](architecture.puml)
+  - [Android Client Architecture](android_architecture.puml)
+  - [Web Portal Architecture](web_architecture.puml)
 
 ## Core Features
 
