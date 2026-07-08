@@ -1,5 +1,7 @@
 # 1. Executive Summary
 
+**Live Deployment URL:** [https://gps.pranavakshit.in](https://gps.pranavakshit.in)
+
 * **What is the project?** GPS Cam Portal is an end-to-end photo capturing and synchronization system. It combines a mobile app for field data collection with a robust web portal for administrative management and data visualization. 
 * **Why was it built?** To ensure that field operations (such as surveys, audits, or asset tracking) can reliably collect, verify, and store geo-tagged photographic evidence.
 * **What problem does it solve?** Field agents often operate in remote areas with spotty network coverage. The portal provides robust offline capabilities on the mobile device while ensuring that uploaded data is strictly mapped to the official Local Government Directory (LGD) spatial hierarchies.
