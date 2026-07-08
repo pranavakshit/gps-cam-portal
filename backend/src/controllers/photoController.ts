@@ -101,7 +101,7 @@ export const getPhotos = async (req: AuthRequest, res: Response): Promise<void> 
     const isRecycleBin = req.query.recycle_bin === 'true';
     
     let whereClause: any = {};
-    if (userRole !== 'ADMIN') {
+    if (userRole !== 'ADMIN' && userRole !== 'VISITOR') {
         whereClause = { userId: userId };
     }
     
