@@ -76,7 +76,7 @@ Once running, open your browser to:
 The Android app captures photos with embedded locations and securely syncs them to the backend when a network connection is available.
 
 1. **Install via APK:**
-   You can download the pre-compiled debug APK from the GitHub releases page, or build it manually below.
+   You can download the pre-compiled debug APK directly from the [GitHub Latest Releases page](https://github.com/pranavakshit/gps-cam-portal/releases/latest), or build it manually below.
 
 2. **Open the Project:**
    Open the `android-app` directory in **Android Studio**.
