@@ -205,27 +205,3 @@ The backend exposes a RESTful API. All endpoints (except login) require an `Auth
 * **Planned**: Implement map-based visualizations (Leaflet/Mapbox) to plot photo coordinates natively in the web portal.
 * **Planned**: Export functionality to generate PDF and CSV audit reports of captured data.
 
----
-
-# 20. Interview Questions
-
-1. Can you walk me through the lifecycle of a photo upload request from the Android app to the database?
-2. Why did you choose Prisma as your ORM over writing raw SQL or using Sequelize?
-3. How does the Local Government Directory (LGD) ingestion algorithm handle large datasets without blocking the Node event loop?
-4. How is the 2-Factor Authentication mathematically implemented in this system?
-5. How did you design the database schema to handle the nested relationships of States, Districts, and Villages?
-6. Explain the soft-delete state machine for photos. Why was it designed this way?
-7. Your system exposes host Docker controls to the web portal. How did you mitigate the security risks associated with mounting the docker socket?
-8. If we needed to scale the backend to 5 instances tomorrow, what would break in your current architecture?
-9. How did you diagnose and solve the VM disk saturation issue?
-10. Describe how the Role-Based Access Control is enforced at the API layer.
-11. How does the `/offline-bundle` endpoint work, and why was it necessary?
-12. Why did you use B-Tree indexes on the spatial hierarchy tables?
-13. Explain how Nginx Proxy Manager routes traffic to your Docker containers.
-14. What are the advantages of using Vite over Create React App or Webpack for the frontend?
-15. How do you handle database migrations when deploying new features to the VM?
-16. Walk me through the security mechanisms protecting the API against unauthenticated access.
-17. How does the frontend conditionally render administrative UI elements without compromising backend security?
-18. What would you do differently if you had to rebuild the file storage component?
-19. How did you structure the Express routing layer to keep the codebase maintainable?
-20. In the context of the Android app, what challenges did you face when syncing high-resolution images over unstable networks?
