@@ -2,25 +2,36 @@
 skinparam componentStyle uml2
 
 actor "Field Agent (Android)" as Agent
-actor "Admin/User (Browser)" as Admin
+actor "Admin/User/Visitor (Browser)" as PortalUser
 
-node "Docker Compose Environment" {
-  component "Nginx Proxy\n(SSL Termination)" as Nginx
-  component "Backend API\n(Node/Express)" as Backend
-  component "Web Portal\n(Vite/React)" as Web
-  database "MySQL DB" as DB
-  folder "Storage Volume\n(Uploaded Photos)" as Storage
-  component "Docker Daemon\n(Socket)" as DockerSock
+node "Android Device (Offline-First)" {
+  component "Android App (Kotlin)" as MobileApp
+  database "Local SQLite\n(Offline Cache & LGD)" as LocalDB
 }
 
-Agent --> Backend : HTTP/HTTPS (JWT)
-Agent --> Web : (optional) Web view
-Web --> Backend : HTTP/HTTPS (JWT)
+node "Docker Compose Environment (Ubuntu VM)" {
+  component "Nginx Proxy\n(SSL Termination)" as Nginx
+  
+  component "Web Portal (Vite/React)\n(Admin Dashboard)" as Web
+  
+  component "Backend API (Node/Express)\n[JWT Auth & 2FA]" as Backend
+  
+  database "MySQL 8 DB\n(Prisma ORM)" as DB
+  folder "Local Storage Volume\n(Uploaded Photos)" as Storage
+  component "Docker Daemon\n(Host Socket)" as DockerSock
+}
+
+Agent --> MobileApp : Uses
+MobileApp <--> LocalDB : Read/Write (Offline)
+MobileApp --> Nginx : HTTP/HTTPS (Sync Photos/Data)
+
+PortalUser --> Nginx : HTTPS requests
+Nginx --> Web : Serve static assets
+Nginx --> Backend : Reverse Proxy API calls
+
+Web --> Backend : HTTP/HTTPS (JWT + 2FA)
 Backend --> DB : SQL Queries
 Backend --> Storage : Store/Retrieve photos
-Backend --> DockerSock : Docker control API
-Nginx --> Backend : Reverse Proxy
-Nginx --> Web : Serve static assets
-Admin --> Nginx : HTTPS requests
+Backend --> DockerSock : Docker control API (Admin only)
 
 @enduml
